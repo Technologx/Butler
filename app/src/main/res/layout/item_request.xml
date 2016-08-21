@@ -5,6 +5,7 @@
     android:layout_height="wrap_content"
     android:background="?android:attr/selectableItemBackground"
     android:clickable="true"
+    android:padding="@dimen/activity_horizontal_margin"
     android:clipToPadding="false"
     android:descendantFocusability="blocksDescendants"
     android:focusable="true"

@@ -6,7 +6,9 @@ import android.support.annotation.DrawableRes;
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.StringRes;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -47,6 +49,14 @@ public abstract class ButlerFragment extends Fragment {
 
     protected void setFabIcon(@DrawableRes int icon) {
         butlerActivity().getFab().setImageResource(icon);
+    }
+
+    protected void fabSnackbar(String text, int duration) {
+        if (!hasFab()) {
+            Log.d("Butler", "fab not attached, stopping snackbar");
+            return; //TODO log
+        }
+        Snackbar.make(butlerActivity().getFab(), text, duration);
     }
 
     @CallSuper

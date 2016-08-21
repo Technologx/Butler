@@ -20,7 +20,9 @@ import android.view.View;
 
 import com.pitchedapps.butler.library.interfaces.IButlerPermissions;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by Allan Wang on 2016-08-19.
@@ -99,9 +101,15 @@ public abstract class ButlerActivity extends AppCompatActivity {
             callback.onSuccess();
             return;
         }
+        List<String> missingPermissions = new ArrayList<>();
+        for (String s : permissions) {
+            if (ActivityCompat.checkSelfPermission(this, s) == PackageManager.PERMISSION_DENIED) {
+                missingPermissions.add(s);
+            }
+        }
         if (mButlerPermissionCallbacks == null) mButlerPermissionCallbacks = new HashMap<>();
         mButlerPermissionCallbacks.put(requestCode, callback);
-        ActivityCompat.requestPermissions(this, permissions, requestCode);
+        ActivityCompat.requestPermissions(this, missingPermissions.toArray(new String[missingPermissions.size()]), requestCode);
     }
 
     @CallSuper
