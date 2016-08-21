@@ -68,7 +68,7 @@ public final class IconRequest {
         protected String mFooter = null;
         protected boolean mIncludeDeviceInfo = true;
         protected boolean mGenerateAppFilterXml = true;
-        protected boolean mGenerateAppFilterJson;
+        protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
 
         protected transient AppsLoadCallback mLoadCallback;

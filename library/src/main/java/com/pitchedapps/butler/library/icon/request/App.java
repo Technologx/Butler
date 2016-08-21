@@ -7,6 +7,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.Nullable;
@@ -56,7 +57,13 @@ public class App implements Parcelable {
             if (ai == null || ai.icon == 0) return mIcon;
             final Resources mRes = getResources(context, ai);
             if (mRes == null) return mIcon;
-            mIconHighRes = ResourcesCompat.getDrawableForDensity(mRes, ai.icon, DisplayMetrics.DENSITY_XXXHIGH, null);
+            int iconDpi;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                iconDpi = DisplayMetrics.DENSITY_XXXHIGH;
+            } else {
+                iconDpi = DisplayMetrics.DENSITY_XXHIGH;
+            }
+            mIconHighRes = ResourcesCompat.getDrawableForDensity(mRes, ai.icon, iconDpi, null);
         }
         return mIconHighRes;
     }
