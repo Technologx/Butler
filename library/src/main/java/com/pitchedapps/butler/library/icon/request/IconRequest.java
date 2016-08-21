@@ -13,6 +13,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -21,13 +23,10 @@ import android.text.Html;
 
 import com.pitchedapps.butler.library.R;
 
-import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -44,6 +43,8 @@ public final class IconRequest {
     private ArrayList<App> mSelectedApps;
     private transient Handler mHandler;
 
+    private static final String builderKey = "builder", appsKey = "apps", selectedKey = "selected_apps";
+
     private static IconRequest mRequest;
 
     private IconRequest() {
@@ -56,7 +57,7 @@ public final class IconRequest {
         mRequest = this;
     }
 
-    public static class Builder implements Serializable {
+    public static class Builder implements Parcelable {
 
         protected transient Context mContext;
         protected File mSaveDir = null;
@@ -162,6 +163,50 @@ public final class IconRequest {
         public IconRequest build() {
             return new IconRequest(this);
         }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeSerializable(this.mSaveDir);
+            dest.writeString(this.mFilterName);
+            dest.writeString(this.mEmail);
+            dest.writeString(this.mSubject);
+            dest.writeString(this.mHeader);
+            dest.writeString(this.mFooter);
+            dest.writeByte(this.mIncludeDeviceInfo ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mGenerateAppFilterJson ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mErrorOnInvalidAppFilterDrawable ? (byte) 1 : (byte) 0);
+        }
+
+        protected Builder(Parcel in) {
+            this.mSaveDir = (File) in.readSerializable();
+            this.mFilterName = in.readString();
+            this.mEmail = in.readString();
+            this.mSubject = in.readString();
+            this.mHeader = in.readString();
+            this.mFooter = in.readString();
+            this.mIncludeDeviceInfo = in.readByte() != 0;
+            this.mGenerateAppFilterXml = in.readByte() != 0;
+            this.mGenerateAppFilterJson = in.readByte() != 0;
+            this.mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
+        }
+
+        public static final Parcelable.Creator<Builder> CREATOR = new Parcelable.Creator<Builder>() {
+            @Override
+            public Builder createFromParcel(Parcel source) {
+                return new Builder(source);
+            }
+
+            @Override
+            public Builder[] newArray(int size) {
+                return new Builder[size];
+            }
+        };
     }
 
     public static Builder start(Context context) {
@@ -616,9 +661,9 @@ public final class IconRequest {
 
     public static void saveInstanceState(Bundle outState) {
         if (mRequest == null || outState == null) return;
-        outState.putSerializable("builder", mRequest.mBuilder);
-        outState.putSerializable("apps", mRequest.mApps);
-        outState.putSerializable("selected_apps", mRequest.mSelectedApps);
+        outState.putParcelable(builderKey, mRequest.mBuilder);
+        outState.putParcelableArrayList(appsKey, mRequest.mApps);
+        outState.putParcelableArrayList(selectedKey, mRequest.mSelectedApps);
     }
 
     @SuppressWarnings("unchecked")
@@ -630,8 +675,8 @@ public final class IconRequest {
         if (inState == null)
             return null;
         mRequest = new IconRequest();
-        if (inState.containsKey("builder")) {
-            mRequest.mBuilder = (Builder) inState.getSerializable("builder");
+        if (inState.containsKey(builderKey)) {
+            mRequest.mBuilder = inState.getParcelable(builderKey);
             if (mRequest.mBuilder != null) {
                 mRequest.mBuilder.mContext = context;
                 mRequest.mBuilder.mLoadCallback = loadCb;
@@ -639,10 +684,10 @@ public final class IconRequest {
                 mRequest.mBuilder.mSelectionCallback = selectionCb;
             }
         }
-        if (inState.containsKey("apps"))
-            mRequest.mApps = (ArrayList<App>) inState.getSerializable("apps");
-        if (inState.containsKey("selected_apps"))
-            mRequest.mSelectedApps = (ArrayList<App>) inState.getSerializable("selected_apps");
+        if (inState.containsKey(appsKey))
+            mRequest.mApps = inState.getParcelableArrayList(appsKey);
+        if (inState.containsKey(selectedKey))
+            mRequest.mSelectedApps = inState.getParcelableArrayList(selectedKey);
         if (mRequest.mApps == null)
             mRequest.mApps = new ArrayList<>();
         if (mRequest.mSelectedApps == null)
