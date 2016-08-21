@@ -65,7 +65,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
     private long start, end;
 
     private void log(String s, @Nullable Object... o) {
-        Log.e("CapsuleSample", String.format(Locale.getDefault(), s, o));
+        Log.e("ButlerSample", String.format(Locale.getDefault(), s, o));
     }
 
     @Override
@@ -86,6 +86,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
                     .sendCallback(this)
                     .selectionCallback(this)
                     .filterOff()
+                    .debugMode(true)
                     .build();
             request.loadApps();
         }
@@ -100,6 +101,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
         mRV = (RecyclerView) v.findViewById(R.id.rv);
         LinearLayoutManager llm = new LinearLayoutManager(getActivity());
         mRV.setLayoutManager(llm);
+        mRV.setHasFixedSize(true);
         mAdapter = new RequestsAdapter();
         mRV.setAdapter(mAdapter);
         mProgress = (ProgressBar) v.findViewById(R.id.progress);

@@ -12,6 +12,8 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 
+import timber.log.Timber;
+
 /**
  * Created by Allan Wang on 2016-08-20.
  */
@@ -69,11 +71,11 @@ class ComponentInfoUtil {
 
             if (filter.contains(launchStr)) {
                 filtered++;
-                IRLog.log("IconRequestApps", "Filtered %s", launchStr);
+                Timber.d("IR", "Filtered %s", launchStr);
                 continue;
             }
 
-//            IRLog.log("IconRequestApps", "Loaded %s", launchStr);
+//            Timber.d("IR", "Loaded %s", launchStr);
             final String name = ai.loadLabel(pm).toString();
             apps.add(new App(name, launchStr, ai.packageName, false));
 
@@ -89,7 +91,7 @@ class ComponentInfoUtil {
             }
         }
 
-        IRLog.log("IconRequestApps", "Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
+        Timber.d("IR", "Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
         return apps;
     }
 

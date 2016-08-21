@@ -19,6 +19,7 @@ import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
+import android.support.v4.app.NotificationCompat;
 import android.text.Html;
 
 import com.pitchedapps.butler.library.R;
@@ -32,6 +33,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
+
+import timber.log.Timber;
 
 /**
  * Created by Allan Wang on 2016-08-20.
@@ -51,10 +54,13 @@ public final class IconRequest {
         mSelectedApps = new ArrayList<>();
     }
 
-    private IconRequest(Builder builder) {
+    private IconRequest(@NonNull Builder builder) {
         this();
         mBuilder = builder;
         mRequest = this;
+        if (mBuilder.mDebugMode) {
+            Timber.plant(new IRLogTree());
+        }
     }
 
     public static class Builder implements Parcelable {
@@ -70,6 +76,7 @@ public final class IconRequest {
         protected boolean mGenerateAppFilterXml = true;
         protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
+        protected boolean mDebugMode = false;
 
         protected transient AppsLoadCallback mLoadCallback;
         protected transient RequestSendCallback mSendCallback;
@@ -160,6 +167,11 @@ public final class IconRequest {
             return this;
         }
 
+        public Builder debugMode(boolean debug) {
+            mDebugMode = debug;
+            return this;
+        }
+
         public IconRequest build() {
             return new IconRequest(this);
         }
@@ -181,6 +193,7 @@ public final class IconRequest {
             dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterJson ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mErrorOnInvalidAppFilterDrawable ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mDebugMode ? (byte) 1 : (byte) 0);
         }
 
         protected Builder(Parcel in) {
@@ -194,6 +207,7 @@ public final class IconRequest {
             this.mGenerateAppFilterXml = in.readByte() != 0;
             this.mGenerateAppFilterJson = in.readByte() != 0;
             this.mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
+            this.mDebugMode = in.readByte() != 0;
         }
 
         public static final Parcelable.Creator<Builder> CREATOR = new Parcelable.Creator<Builder>() {
@@ -229,7 +243,7 @@ public final class IconRequest {
         InputStream is;
         try {
             final AssetManager am = mBuilder.mContext.getAssets();
-            IRLog.log("IconRequestFilter", "Loading your appfilter, opening: %s", mBuilder.mFilterName);
+            Timber.d("IR", "Loading your appfilter, opening: %s", mBuilder.mFilterName);
             is = am.open(mBuilder.mFilterName);
         } catch (final Throwable e) {
             e.printStackTrace();
@@ -294,9 +308,9 @@ public final class IconRequest {
 
                 start = line.indexOf(itemEndStr);
                 if (start != -1 && (component != null || drawable != null)) {
-                    IRLog.log("IconRequestFilter", "Found: %s (%s)", component, drawable);
+                    Timber.d("IR", "Found: %s (%s)", component, drawable);
                     if (drawable == null || drawable.trim().isEmpty()) {
-                        IRLog.log("IconRequestFilter", "WARNING: Drawable shouldn't be null.");
+                        Timber.d("IR", "WARNING: Drawable shouldn't be null.");
                         if (mBuilder.mErrorOnInvalidAppFilterDrawable) {
                             if (mInvalidDrawables == null)
                                 mInvalidDrawables = new StringBuilder();
@@ -312,7 +326,7 @@ public final class IconRequest {
                             identifier = 0;
                         }
                         if (identifier == 0) {
-                            IRLog.log("IconRequestFilter", "WARNING: Drawable %s (for %s) doesn't match up with a resource.", drawable, component);
+                            Timber.d("IR", "WARNING: Drawable %s (for %s) doesn't match up with a resource.", drawable, component);
                             if (mBuilder.mErrorOnInvalidAppFilterDrawable) {
                                 if (mInvalidDrawables == null)
                                     mInvalidDrawables = new StringBuilder();
@@ -337,7 +351,7 @@ public final class IconRequest {
                     }
                 });
             }
-            IRLog.log("IconRequestFilter", "Found %d total app(s) in your appfilter.", defined.size());
+            Timber.d("IR", "Found %d total app(s) in your appfilter.", defined.size());
         } catch (final Throwable e) {
             e.printStackTrace();
             if (mBuilder.mLoadCallback != null) {
@@ -368,7 +382,7 @@ public final class IconRequest {
             public void run() {
                 final HashSet<String> filter = loadFilterApps();
                 if (filter == null) return;
-                IRLog.log("IconRequestApps", "Loading unthemed installed apps...");
+                Timber.d("IR", "Loading unthemed installed apps...");
                 mApps = ComponentInfoUtil.getInstalledApps(mBuilder.mContext,
                         filter, mBuilder.mLoadCallback, mHandler);
                 post(new Runnable() {
@@ -504,7 +518,7 @@ public final class IconRequest {
     }
 
     public void send() {
-        IRLog.log("IconRequestSend", "Preparing your request to send...");
+        Timber.d("IR", "Preparing your request to send...");
         if (mBuilder.mSendCallback != null)
             mBuilder.mSendCallback.onRequestPreparing();
         if (mHandler == null)
@@ -528,7 +542,7 @@ public final class IconRequest {
                 mBuilder.mSaveDir.mkdirs();
 
                 // Save app icons
-                IRLog.log("IconRequestSend", "Saving icons...");
+                Timber.d("IR", "Saving icons...");
                 for (App app : mSelectedApps) {
                     final Drawable drawable = app.getHighResIcon(mBuilder.mContext);
                     if (!(drawable instanceof BitmapDrawable)) continue;
@@ -547,7 +561,7 @@ public final class IconRequest {
                 }
 
                 // Create appfilter
-                IRLog.log("IconRequestSend", "Creating appfilter...");
+                Timber.d("IR", "Creating appfilter...");
                 StringBuilder xmlSb = null;
                 StringBuilder jsonSb = null;
                 if (mBuilder.mGenerateAppFilterXml) {
@@ -616,7 +630,7 @@ public final class IconRequest {
                 }
 
                 // Zip everything into an archive
-                IRLog.log("IconRequestSend", "Creating ZIP...");
+                Timber.d("IR", "Creating ZIP...");
                 final SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd", Locale.getDefault());
                 final File zipFile = new File(mBuilder.mSaveDir,
                         String.format("IconRequest-%s.zip", df.format(new Date())));
@@ -629,7 +643,7 @@ public final class IconRequest {
                 }
 
                 // Cleanup files
-                IRLog.log("IconRequestSend", "Cleaning up files...");
+                Timber.d("IR", "Cleaning up files...");
                 final File[] files = mBuilder.mSaveDir.listFiles();
                 for (File fi : files) {
                     if (!fi.isDirectory() && (fi.getName().endsWith(".png") || fi.getName().endsWith(".xml")))
@@ -640,7 +654,7 @@ public final class IconRequest {
                     @Override
                     public void run() {
                         // Send email intent
-                        IRLog.log("IconRequestSend", "Launching intent!");
+                        Timber.d("IR", "Launching intent!");
                         final Uri zipUri = Uri.fromFile(zipFile);
                         final Intent emailIntent = new Intent(Intent.ACTION_SEND)
                                 .putExtra(Intent.EXTRA_EMAIL, new String[]{mBuilder.mEmail})

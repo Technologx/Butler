@@ -1,15 +1,12 @@
 package com.pitchedapps.butler.request;
 
-import android.content.Context;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.AppCompatCheckBox;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.pitchedapps.butler.R;
@@ -37,11 +34,6 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.Reques
 
     @Override
     public int getItemCount() {
-        if (getApps() != null) {
-            Log.e("COUNT", "#" + getApps().size());
-        } else {
-            Log.e("COUNT", "NULL");
-        }
         return getApps() != null ? getApps().size() : 0;
     }
 
@@ -69,6 +61,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.Reques
             txtName = (TextView) v.findViewById(R.id.txtName);
             checkBox = (AppCompatCheckBox) v.findViewById(R.id.chkSelected);
             this.adapter = adapter;
+            v.setOnClickListener(this);
         }
 
         @Override
@@ -78,7 +71,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.Reques
                 //noinspection ConstantConditions
                 final App app = ir.getApps().get(getAdapterPosition());
                 ir.toggleAppSelected(app);
-                adapter.notifyItemChanged(getAdapterPosition());
+                checkBox.setChecked(ir.isAppSelected(app));
             }
         }
 
