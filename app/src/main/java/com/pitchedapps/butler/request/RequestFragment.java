@@ -3,7 +3,6 @@ package com.pitchedapps.butler.request;
 import android.Manifest;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
@@ -21,29 +20,26 @@ import com.pitchedapps.butler.library.icon.request.AppsLoadCallback;
 import com.pitchedapps.butler.library.icon.request.AppsSelectionListener;
 import com.pitchedapps.butler.library.icon.request.IconRequest;
 import com.pitchedapps.butler.library.icon.request.RequestSendCallback;
-import com.pitchedapps.butler.library.interfaces.IButlerPermissions;
-import com.pitchedapps.butler.library.ui.ButlerFragment;
+import com.pitchedapps.capsule.library.CapsuleFragment;
+import com.pitchedapps.capsule.library.permissions.CPermissionCallback;
+import com.pitchedapps.capsule.library.permissions.PermissionResult;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.Objects;
 
 /**
  * Created by Allan Wang on 2016-08-20.
  */
-public class RequestFragment extends ButlerFragment implements AppsLoadCallback, RequestSendCallback, AppsSelectionListener {
+public class RequestFragment extends CapsuleFragment implements AppsLoadCallback, RequestSendCallback, AppsSelectionListener {
     @Override
     public void onFabClick(View v) {
-        getPermissions(new IButlerPermissions() {
+        getPermissions(new CPermissionCallback() {
             @Override
-            public void onSuccess() {
-                IconRequest.get().send();
-            }
-
-            @Override
-            public void onDenied() {
-
+            public void onResult(PermissionResult result) {
+                if (result.isAllGranted()) {
+                    IconRequest.get().send();
+                }
             }
         }, 9, Manifest.permission.WRITE_EXTERNAL_STORAGE);
     }
@@ -69,7 +65,7 @@ public class RequestFragment extends ButlerFragment implements AppsLoadCallback,
     private long start, end;
 
     private void log(String s, @Nullable Object... o) {
-        Log.e("ButlerSample", String.format(Locale.getDefault(), s, o));
+        Log.e("CapsuleSample", String.format(Locale.getDefault(), s, o));
     }
 
     @Override
@@ -82,7 +78,7 @@ public class RequestFragment extends ButlerFragment implements AppsLoadCallback,
                     .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
                     .withSubject("Icon Request - Just a Test")
                     .toEmail("fake-email@fake-website.com")
-                    .saveDir(new File(Environment.getExternalStorageDirectory(), "Pitched_Apps/Butler"))
+                    .saveDir(new File(Environment.getExternalStorageDirectory(), "Pitched_Apps/Capsule"))
                     .includeDeviceInfo(true) // defaults to true anyways
                     .generateAppFilterXml(true) // defaults to true anyways
                     .generateAppFilterJson(true)

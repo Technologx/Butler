@@ -3,18 +3,16 @@ package com.pitchedapps.butler;
 import android.os.Bundle;
 
 import com.pitchedapps.butler.library.icon.request.IconRequest;
-import com.pitchedapps.butler.library.ui.ButlerActivity;
 import com.pitchedapps.butler.request.RequestFragment;
+import com.pitchedapps.capsule.library.activities.CapsuleActivity;
 
-public class MainActivity extends ButlerActivity {
+public class MainActivity extends CapsuleActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
-        butlerToolbar(R.id.toolbar);
-        butlerFab(R.id.fab);
+        capsulate().toolbar(R.id.toolbar);
 
         switchFragment(new RequestFragment());
     }
@@ -22,6 +20,16 @@ public class MainActivity extends ButlerActivity {
     @Override
     protected int getFragmentId() {
         return R.id.main;
+    }
+
+    @Override
+    protected int getFabId() {
+        return R.id.fab;
+    }
+
+    @Override
+    protected int getContentViewId() {
+        return R.layout.activity_main;
     }
 
     @Override

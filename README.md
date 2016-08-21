@@ -1,7 +1,7 @@
 # Butler
 Here to serve you an easier way of coding.
 
-To apply, add the following to you Gradle:
+To apply, add the following to your root build.gradle:
 
 ```gradle
 allprojects {
@@ -10,7 +10,11 @@ allprojects {
 		maven { url "https://jitpack.io" }
 	}
 }
+```
 
+And add the following dependencies:
+
+```gradle
 dependencies {
         compile 'com.github.AllanWang:Butler:-SNAPSHOT' //Or a specific version/commit
 }
