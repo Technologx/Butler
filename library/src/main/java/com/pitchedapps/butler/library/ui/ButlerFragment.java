@@ -3,36 +3,50 @@ package com.pitchedapps.butler.library.ui;
 import android.os.Bundle;
 import android.support.annotation.CallSuper;
 import android.support.annotation.DrawableRes;
+import android.support.annotation.IntRange;
+import android.support.annotation.NonNull;
+import android.support.annotation.StringRes;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.pitchedapps.butler.library.interfaces.IButlerPermissions;
+
 /**
  * Created by Allan Wang on 2016-08-19.
- *
+ * <p>
  * Handles all fab related things
  */
 public abstract class ButlerFragment extends Fragment {
 
     public abstract void onFabClick(View v);
 
-    abstract
+    public abstract @StringRes int getTitleId();
+
+    protected abstract
     @DrawableRes
     int getFabIcon();
 
-    abstract boolean hasFab();
+    protected abstract boolean hasFab();
 
     protected void showFab() {
-        ((ButlerActivity) getActivity()).getFab().show();
+        butlerActivity().getFab().show();
     }
 
     protected void hideFab() {
-        ((ButlerActivity) getActivity()).getFab().hide();
+        butlerActivity().getFab().hide();
+    }
+
+    private ButlerActivity butlerActivity() {
+        if (!(getActivity() instanceof ButlerActivity)) {
+            throw new RuntimeException("Context is not an instance of ButlerActivity");
+        }
+        return ((ButlerActivity) getActivity());
     }
 
     protected void setFabIcon(@DrawableRes int icon) {
-        ((ButlerActivity) getActivity()).getFab().setImageResource(icon);
+        butlerActivity().getFab().setImageResource(icon);
     }
 
     @CallSuper
@@ -40,11 +54,17 @@ public abstract class ButlerFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (hasFab()) {
             showFab();
-            setFabIcon(getFabIcon());
+            if (getFabIcon() != 0) {
+                setFabIcon(getFabIcon());
+            }
         } else {
             hideFab();
         }
         return null;
+    }
+
+    protected void getPermissions(@NonNull IButlerPermissions callback, @IntRange(from = 1, to = Integer.MAX_VALUE) int requestCode, @NonNull String... permissions) {
+        butlerActivity().requestPermission(callback, requestCode, permissions);
     }
 
 }

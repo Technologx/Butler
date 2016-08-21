@@ -530,12 +530,12 @@ public final class IconRequest {
                 // Save app icons
                 IRLog.log("IconRequestSend", "Saving icons...");
                 for (App app : mSelectedApps) {
-                    final Drawable drawable = app.getIcon(mBuilder.mContext);
+                    final Drawable drawable = app.getHighResIcon(mBuilder.mContext);
                     if (!(drawable instanceof BitmapDrawable)) continue;
                     final BitmapDrawable bDrawable = (BitmapDrawable) drawable;
                     final Bitmap icon = bDrawable.getBitmap();
                     final File file = new File(mBuilder.mSaveDir,
-                            String.format("%s.png", app.getPackage()));
+                            String.format("%s.png", app.generateFileName())); //TODO check
                     filesToZip.add(file);
                     try {
                         FileUtil.writeIcon(file, icon);
@@ -552,36 +552,36 @@ public final class IconRequest {
                 StringBuilder jsonSb = null;
                 if (mBuilder.mGenerateAppFilterXml) {
                     xmlSb = new StringBuilder("<resources>\n" +
-                            "    <iconback img1=\"iconback\" />\n" +
-                            "    <iconmask img1=\"iconmask\" />\n" +
-                            "    <iconupon img1=\"iconupon\" />\n" +
-                            "    <scale factor=\"1.0\" />");
+                            "\t<iconback img1=\"iconback\" />\n" +
+                            "\t<iconmask img1=\"iconmask\" />\n" +
+                            "\t<iconupon img1=\"iconupon\" />\n" +
+                            "\t<scale factor=\"1.0\" />");
                 }
                 if (mBuilder.mGenerateAppFilterJson) {
                     jsonSb = new StringBuilder("{\n" +
-                            "    \"components\": [");
+                            "\t\"components\": [");
                 }
                 int index = 0;
                 for (App app : mSelectedApps) {
                     final String name = app.getName();
                     final String drawableName = IRUtils.drawableName(name);
                     if (xmlSb != null) {
-                        xmlSb.append("\n\n    <!-- ");
+                        xmlSb.append("\n\n\t<!-- ");
                         xmlSb.append(name);
                         xmlSb.append(" -->\n");
-                        xmlSb.append(String.format("    <item\n" +
-                                        "        component=\"ComponentInfo{%s}\"\n" +
-                                        "        drawable=\"%s\" />",
+                        xmlSb.append(String.format("\t<item\n" +
+                                        "\t\tcomponent=\"ComponentInfo{%s}\"\n" +
+                                        "\t\tdrawable=\"%s\" />",
                                 app.getCode(), drawableName));
                     }
                     if (jsonSb != null) {
                         if (index > 0) jsonSb.append(",");
                         jsonSb.append("\n        {\n");
-                        jsonSb.append(String.format("            \"%s\": \"%s\",\n", "name", name));
-                        jsonSb.append(String.format("            \"%s\": \"%s\",\n", "pkg", app.getPackage()));
-                        jsonSb.append(String.format("            \"%s\": \"%s\",\n", "componentInfo", app.getCode()));
-                        jsonSb.append(String.format("            \"%s\": \"%s\"\n", "drawable", drawableName));
-                        jsonSb.append("        }");
+                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\",\n", "name", name));
+                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\",\n", "pkg", app.getPackage()));
+                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\",\n", "componentInfo", app.getCode()));
+                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\"\n", "drawable", drawableName));
+                        jsonSb.append("\t\t}");
                     }
                     index++;
                 }

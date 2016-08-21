@@ -1,15 +1,22 @@
 package com.pitchedapps.butler.library.icon.request;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.Nullable;
+import android.support.v4.content.res.ResourcesCompat;
+import android.util.DisplayMetrics;
 import android.widget.ImageView;
 
 import com.pitchedapps.butler.library.icon.request.glide.AppIconLoader;
+
+import java.util.regex.Pattern;
 
 /**
  * Created by Allan Wang on 2016-08-20.
@@ -22,6 +29,7 @@ public class App implements Parcelable {
     private boolean mRequested;
 
     private transient Drawable mIcon;
+    private transient Drawable mIconHighRes;
 
     public App() {
     }
@@ -42,6 +50,23 @@ public class App implements Parcelable {
         return mIcon;
     }
 
+    public Drawable getHighResIcon(Context context) {
+        if (mIconHighRes == null) {
+            final ApplicationInfo ai = getAppInfo(context);
+            if (ai == null || ai.icon == 0) return mIcon;
+            final Resources mRes = getResources(context, ai);
+            if (mRes == null) return mIcon;
+            mIconHighRes = ResourcesCompat.getDrawableForDensity(mRes, ai.icon, DisplayMetrics.DENSITY_XXXHIGH, null);
+        }
+        return mIconHighRes;
+    }
+
+    //TODO check if prefix is necessary
+    public String generateFileName() {
+        if (Character.isDigit(mName.charAt(0))) return "a_" + mName;
+        return mName;
+    }
+    
     public void loadIcon(ImageView into) {
         if (IRUtils.inClassPath("com.bumptech.glide.load.model.ModelLoader")) {
             AppIconLoader.display(into, this);
@@ -66,6 +91,24 @@ public class App implements Parcelable {
     public ApplicationInfo getAppInfo(Context context) {
         try {
             return context.getPackageManager().getApplicationInfo(mPkg, 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public ActivityInfo getActivityInfo(Context context) {
+        try {
+            return context.getPackageManager().getActivityInfo(new ComponentName(mCode.split("/")[0], mCode.split("/")[1]), PackageManager.GET_META_DATA);
+        } catch (PackageManager.NameNotFoundException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public Resources getResources(Context context, ApplicationInfo ai) {
+        try {
+            return context.getPackageManager().getResourcesForApplication(ai);
         } catch (PackageManager.NameNotFoundException e) {
             return null;
         }
