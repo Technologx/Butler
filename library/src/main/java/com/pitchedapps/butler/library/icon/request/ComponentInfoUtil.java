@@ -71,11 +71,11 @@ class ComponentInfoUtil {
 
             if (filter.contains(launchStr)) {
                 filtered++;
-                Timber.d("IR", "Filtered %s", launchStr);
+                IRLog.d("Filtered %s", launchStr);
                 continue;
             }
 
-//            Timber.d("IR", "Loaded %s", launchStr);
+//            IRLog.d("Loaded %s", launchStr);
             final String name = ai.loadLabel(pm).toString();
             apps.add(new App(name, launchStr, ai.packageName, false));
 
@@ -91,7 +91,7 @@ class ComponentInfoUtil {
             }
         }
 
-        Timber.d("IR", "Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
+        IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
         return apps;
     }
 

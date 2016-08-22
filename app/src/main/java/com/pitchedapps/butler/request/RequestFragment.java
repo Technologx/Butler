@@ -20,7 +20,7 @@ import com.pitchedapps.butler.library.icon.request.AppsLoadCallback;
 import com.pitchedapps.butler.library.icon.request.AppsSelectionListener;
 import com.pitchedapps.butler.library.icon.request.IconRequest;
 import com.pitchedapps.butler.library.icon.request.RequestSendCallback;
-import com.pitchedapps.capsule.library.CapsuleFragment;
+import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
 import com.pitchedapps.capsule.library.permissions.CPermissionCallback;
 import com.pitchedapps.capsule.library.permissions.PermissionResult;
 
@@ -124,7 +124,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
     public void onAppsLoaded(ArrayList<App> apps, Exception e) {
         end = System.currentTimeMillis();
         log("LOAD TIME %d MS", end - start);
-        fabSnackbar(String.format(Locale.getDefault(), "Loaded in %d milliseconds", end - start), Snackbar.LENGTH_LONG);
+        snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", end - start), Snackbar.LENGTH_LONG);
         mProgress.setVisibility(View.GONE);
         mRV.setVisibility(View.VISIBLE);
         mAdapter.notifyDataSetChanged();
