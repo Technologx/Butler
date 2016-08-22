@@ -18,6 +18,7 @@ import com.pitchedapps.butler.R;
 import com.pitchedapps.butler.library.icon.request.App;
 import com.pitchedapps.butler.library.icon.request.AppsLoadCallback;
 import com.pitchedapps.butler.library.icon.request.AppsSelectionListener;
+import com.pitchedapps.butler.library.icon.request.IRLog;
 import com.pitchedapps.butler.library.icon.request.IconRequest;
 import com.pitchedapps.butler.library.icon.request.RequestSendCallback;
 import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
@@ -72,7 +73,6 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (IconRequest.get() == null) {
-            log("HERE");
             IconRequest request = IconRequest.start(getActivity())
                     .withHeader("Hey, testing Icon Request!")
                     .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
@@ -110,7 +110,6 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
             IconRequest.restoreInstanceState(getActivity(), savedInstanceState, this, this, this);
 
         start = System.currentTimeMillis();
-        log("Start", start);
 
         return v;
     }

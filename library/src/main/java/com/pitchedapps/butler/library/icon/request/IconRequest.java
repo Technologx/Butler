@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -15,17 +16,23 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.support.annotation.CallSuper;
 import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
+import android.support.annotation.XmlRes;
 import android.support.v4.app.NotificationCompat;
 import android.text.Html;
 
 import com.pitchedapps.butler.library.R;
 
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
@@ -233,12 +240,64 @@ public final class IconRequest {
 
     private StringBuilder mInvalidDrawables;
 
+    @CallSuper
+    @Nullable
+    private HashSet<String> loadFilterApps(@XmlRes int appfilterId) {
+        IRUtils.startTimer("LFAXML");
+        final HashSet<String> defined = new HashSet<>();
+        if (IRUtils.isEmpty(mBuilder.mFilterName)) { //TODO add this
+            IRUtils.stopTimer("LFAXML");
+            return defined;
+        }
+        XmlResourceParser parser = null;
+        try {
+            parser = mBuilder.mContext.getResources().getXml(appfilterId);
+            String mAppCode = null;
+            int eventType = parser.getEventType();
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                switch (eventType) {
+                    case XmlPullParser.START_TAG:
+                        final String tagName = parser.getName();
+                        if (tagName.equals("item")) {
+                            try {
+                                // Read package and activity name
+                                mAppCode = parser.getAttributeValue(null, "component");
+                                mAppCode = mAppCode.substring(14, mAppCode.length() - 1); //wrapped in ComponentInfo{[Component]} TODO add checker?
+                                //TODO check for valid drawable
+                                // Add new info to our ArrayList and reset the object. Log commented out to reduce logcat spam.
+                                defined.add(mAppCode);
+                                //if(debugEnabled)
+                                //	Log.d(LOG_TAG, "Added appfilter app:\n" + mAppCode);
+                                mAppCode = null;
+
+                            } catch (Exception e) {
+                                IRLog.d("Error adding parsed appfilter item!", e);
+                            }
+                        }
+                        break;
+                }
+                eventType = parser.next();
+            }
+
+        } catch (XmlPullParserException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (parser != null)
+                parser.close();
+        }
+        IRUtils.stopTimer("LFAXML");
+        return defined;
+    }
+
     @CheckResult
     @Nullable
     private HashSet<String> loadFilterApps() {
+        IRUtils.startTimer("LFAReader");
         final HashSet<String> defined = new HashSet<>();
-        if (IRUtils.isEmpty(mBuilder.mFilterName))
+        if (IRUtils.isEmpty(mBuilder.mFilterName)) {
+            IRUtils.stopTimer("LFAReader");
             return defined;
+        }
 
         InputStream is;
         try {
@@ -255,6 +314,7 @@ public final class IconRequest {
                     }
                 });
             }
+            IRUtils.stopTimer("LFAReader");
             return null;
         }
 
@@ -362,12 +422,13 @@ public final class IconRequest {
                     }
                 });
             }
+            IRUtils.stopTimer("LFAReader");
             return null;
         } finally {
             FileUtil.closeQuietely(reader);
             FileUtil.closeQuietely(is);
         }
-
+        IRUtils.stopTimer("LFAReader");
         return defined;
     }
 
@@ -383,7 +444,7 @@ public final class IconRequest {
                 final HashSet<String> filter = loadFilterApps();
                 if (filter == null) return;
                 IRLog.d("Loading unthemed installed apps...");
-                mApps = ComponentInfoUtil.getInstalledApps(mBuilder.mContext,
+                mApps = ComponentInfoUtil.getInstalledApps2(mBuilder.mContext, //TODO finish testing
                         filter, mBuilder.mLoadCallback, mHandler);
                 post(new Runnable() {
                     @Override

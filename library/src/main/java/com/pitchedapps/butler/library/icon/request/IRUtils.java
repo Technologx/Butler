@@ -3,7 +3,9 @@ package com.pitchedapps.butler.library.icon.request;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
+import java.util.HashMap;
 import java.util.Locale;
 
 /**
@@ -69,5 +71,23 @@ class IRUtils {
     }
 
     private IRUtils() {
+    }
+
+    private static HashMap<String, Long> mTimers;
+
+    public static void startTimer(@NonNull String key) {
+        if (mTimers == null) mTimers = new HashMap<>();
+        mTimers.put(key, System.currentTimeMillis());
+    }
+
+    public static void stopTimer(@NonNull String key) {
+        if (mTimers == null || !mTimers.containsKey(key)) {
+            Log.e("Invalid timer", key);
+            return;
+        }
+        long timeDiff = System.currentTimeMillis() - mTimers.get(key);
+        Log.d("Timer " + key, "took " + timeDiff + "ms");
+        mTimers.remove(key);
+        if (mTimers.isEmpty()) mTimers = null;
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.os.Handler;
 
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ class ComponentInfoUtil {
                                                   final HashSet<String> filter,
                                                   final AppsLoadCallback cb,
                                                   final Handler handler) {
+        IRUtils.startTimer("getInstalledApps");
         final PackageManager pm = context.getPackageManager();
         final List<ApplicationInfo> appInfos = pm.getInstalledApplications(PackageManager.GET_META_DATA);
         try {
@@ -92,6 +94,60 @@ class ComponentInfoUtil {
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
+        IRUtils.stopTimer("getInstalledApps");
+        return apps;
+    }
+
+    public static ArrayList<App> getInstalledApps2(final Context context,
+                                                   final HashSet<String> filter,
+                                                   final AppsLoadCallback cb,
+                                                   final Handler handler) {
+        IRUtils.startTimer("getInstalledApps2");
+        final PackageManager pm = context.getPackageManager();
+        final List<ResolveInfo> packageList =
+                pm.queryIntentActivities(
+                        new Intent("android.intent.action.MAIN")
+                                .addCategory("android.intent.category.LAUNCHER"), 0);
+        Collections.sort(packageList, new Comparator<ResolveInfo>() {
+            @Override
+            public int compare(ResolveInfo a, ResolveInfo b) {
+                String initialName = pm.getApplicationLabel(a.activityInfo.applicationInfo).toString();
+                String finalName = pm.getApplicationLabel(b.activityInfo.applicationInfo).toString();
+                return initialName.compareToIgnoreCase(finalName);
+            }
+        });
+
+        final ArrayList<App> apps = new ArrayList<>();
+
+        int loaded = 0;
+        int filtered = 0;
+        for (ResolveInfo ri : packageList) {
+            String launchStr = ri.activityInfo.packageName + "/" + ri.activityInfo.name;
+
+            if (filter.contains(launchStr)) {
+                filtered++;
+                IRLog.d("Filtered %s", launchStr);
+                continue;
+            }
+
+//            IRLog.d("Loaded %s", launchStr);
+            final String name = ri.loadLabel(pm).toString();
+            apps.add(new App(name, launchStr, ri.activityInfo.packageName, false));
+
+            loaded++;
+            final int percent = (loaded / packageList.size()) * 100;
+            if (cb != null) {
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        cb.onAppsLoadProgress(percent);
+                    }
+                });
+            }
+        }
+
+        IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
+        IRUtils.stopTimer("getInstalledApps2");
         return apps;
     }
 
