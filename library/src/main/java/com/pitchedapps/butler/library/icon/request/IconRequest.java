@@ -79,13 +79,15 @@ public final class IconRequest {
         protected String mHeader = "These apps aren't themed. Thanks in advance";
         protected String mFooter = null;
         protected int mMaxCount = 0;
+        protected boolean mHasMaxCount = false;
+        protected boolean mNoneSelectsAll = true;
         protected boolean mIncludeDeviceInfo = true;
         protected boolean mComments = true;
         protected boolean mGenerateAppFilterXml = true;
         protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
-        protected boolean mDebugMode = false;
 
+        protected boolean mDebugMode = false;
         protected transient AppsLoadCallback mLoadCallback;
         protected transient RequestSendCallback mSendCallback;
         protected transient AppsSelectionListener mSelectionCallback;
@@ -142,11 +144,17 @@ public final class IconRequest {
 
         public Builder maxSelectionCount(@IntRange(from = 0) int count) {
             mMaxCount = count;
+            mHasMaxCount = mMaxCount != 0;
             return this;
         }
 
         public Builder withComments(boolean b) {
             mComments = b;
+            return this;
+        }
+
+        public Builder noSelectionSelectsAll(boolean b) {
+            mNoneSelectsAll = b;
             return this;
         }
 
@@ -208,6 +216,8 @@ public final class IconRequest {
             dest.writeString(this.mHeader);
             dest.writeString(this.mFooter);
             dest.writeInt(this.mMaxCount);
+            dest.writeByte(this.mHasMaxCount ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mNoneSelectsAll ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mIncludeDeviceInfo ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mComments ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
@@ -224,6 +234,8 @@ public final class IconRequest {
             this.mHeader = in.readString();
             this.mFooter = in.readString();
             this.mMaxCount = in.readInt();
+            this.mHasMaxCount = in.readByte() != 0;
+            this.mNoneSelectsAll = in.readByte() != 0;
             this.mIncludeDeviceInfo = in.readByte() != 0;
             this.mComments = in.readByte() != 0;
             this.mGenerateAppFilterXml = in.readByte() != 0;
@@ -471,6 +483,25 @@ public final class IconRequest {
         }).start();
     }
 
+    public void loadHighResIcons() {
+        if (mApps == null) {
+            IRLog.d("High res load failed; app list is empty");
+            return;
+        }
+        if (mHandler == null)
+            mHandler = new Handler();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                IRLog.d("Getting high res icons for all apps...");
+                for (App app : mApps) {
+                    app.getHighResIcon(mBuilder.mContext);
+                }
+                IRLog.d("High res icon retrieval finished...");
+            }
+        }).start();
+    }
+
     @SuppressWarnings("MalformedFormatString")
     private String getBody() {
         StringBuilder sb = new StringBuilder();
@@ -504,7 +535,7 @@ public final class IconRequest {
     }
 
     public boolean selectApp(@NonNull App app) {
-        if (mSelectedApps.size() >= mBuilder.mMaxCount) return false;
+        if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) return false;
         if (!mSelectedApps.contains(app)) {
             mSelectedApps.add(app);
             if (mBuilder.mSelectionCallback != null)
@@ -540,7 +571,7 @@ public final class IconRequest {
             if (!mSelectedApps.contains(app)) {
                 changed = true;
                 mSelectedApps.add(app);
-                if (mSelectedApps.size() >= mBuilder.mMaxCount) break;
+                if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) break;
             }
         }
         if (changed && mBuilder.mSelectionCallback != null)
@@ -607,7 +638,11 @@ public final class IconRequest {
         } else if (IRUtils.isEmpty(mBuilder.mEmail)) {
             postError("The recipient email for the request cannot be empty.", null);
         } else if (mSelectedApps == null || mSelectedApps.size() == 0) {
-            postError("No apps have been selected for sending in the request.", null);
+            if (mBuilder.mNoneSelectsAll) {
+                mSelectedApps = mApps;
+            } else {
+                postError("No apps have been selected for sending in the request.", null);
+            }
         } else if (IRUtils.isEmpty(mBuilder.mSubject)) {
             mBuilder.mSubject = "Icon Request";
         }
@@ -768,8 +803,8 @@ public final class IconRequest {
     @Nullable
     public static IconRequest restoreInstanceState(Context context, Bundle inState,
                                                    AppsLoadCallback loadCb,
-                                                   RequestSendCallback sendCb,
-                                                   AppsSelectionListener selectionCb) {
+                                                   @Nullable RequestSendCallback sendCb,
+                                                   @Nullable AppsSelectionListener selectionCb) {
         if (inState == null)
             return null;
         mRequest = new IconRequest();

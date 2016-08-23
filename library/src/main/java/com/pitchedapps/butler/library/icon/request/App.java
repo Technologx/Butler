@@ -52,9 +52,9 @@ public class App implements Parcelable {
     public Drawable getHighResIcon(Context context) {
         if (mIconHighRes == null) {
             final ApplicationInfo ai = getAppInfo(context);
-            if (ai == null || ai.icon == 0) return mIcon;
+            if (ai == null || ai.icon == 0) return getIcon(context);
             final Resources mRes = getResources(context, ai);
-            if (mRes == null) return mIcon;
+            if (mRes == null) return getIcon(context);
             int iconDpi;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 iconDpi = DisplayMetrics.DENSITY_XXXHIGH;

@@ -32,9 +32,7 @@ import java.util.Locale;
 /**
  * Created by Allan Wang on 2016-08-20.
  */
-public class RequestFragment extends CapsuleFragment implements AppsLoadCallback, RequestSendCallback, AppsSelectionListener {
-
-    private int mMaxCount = 9;
+public class RequestFragment extends CapsuleFragment implements AppsLoadCallback {
 
     @Override
     public void onFabClick(View v) {
@@ -80,15 +78,12 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
                     .withHeader("Hey, testing Icon Request!")
                     .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
                     .withSubject("Icon Request - Just a Test")
-                    .maxSelectionCount(mMaxCount)
                     .toEmail("fake-email@fake-website.com")
                     .saveDir(new File(Environment.getExternalStorageDirectory(), "Pitched_Apps/Capsule"))
                     .includeDeviceInfo(true)
                     .generateAppFilterXml(true)
                     .generateAppFilterJson(false)
                     .loadCallback(this)
-                    .sendCallback(this)
-                    .selectionCallback(this)
                     .filterOff()
                     .debugMode(true)
                     .build();
@@ -111,7 +106,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
         mProgress = (ProgressBar) v.findViewById(R.id.progress);
 
         if (savedInstanceState != null)
-            IconRequest.restoreInstanceState(getActivity(), savedInstanceState, this, this, this);
+            IconRequest.restoreInstanceState(getActivity(), savedInstanceState, this, null, null);
 
         start = System.currentTimeMillis();
 
@@ -129,32 +124,11 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
         mProgress.setVisibility(View.GONE);
         mRV.setVisibility(View.VISIBLE);
         mAdapter.notifyDataSetChanged();
+        IconRequest.get().loadHighResIcons();
     }
 
     @Override
     public void onAppsLoadProgress(int percent) {
-    }
-
-    @Override
-    public void onRequestPreparing() {
-
-    }
-
-    @Override
-    public void onRequestError(Exception e) {
-
-    }
-
-    @Override
-    public void onRequestSent() {
-
-    }
-
-    @Override
-    public void onAppSelectionChanged(int selectedCount) {
-        if (selectedCount >= mMaxCount) {
-            snackbar("Max 9 icons selected", Snackbar.LENGTH_LONG);
-        }
     }
 
     @Override
