@@ -27,7 +27,6 @@ public class App implements Parcelable {
     private String mName;
     private String mCode;
     private String mPkg;
-    private boolean mRequested;
 
     private transient Drawable mIcon;
     private transient Drawable mIconHighRes;
@@ -35,11 +34,10 @@ public class App implements Parcelable {
     public App() {
     }
 
-    App(String name, String code, String pkg, boolean requested) {
+    App(String name, String code, String pkg) {
         mName = name;
         mCode = code;
         mPkg = pkg;
-        mRequested = requested;
     }
 
     public Drawable getIcon(Context context) {
@@ -68,12 +66,6 @@ public class App implements Parcelable {
         return mIconHighRes;
     }
 
-    //TODO check if prefix is necessary
-    public String generateFileName() {
-        if (Character.isDigit(mName.charAt(0))) return "a_" + mName;
-        return mName;
-    }
-    
     public void loadIcon(ImageView into) {
         if (IRUtils.inClassPath("com.bumptech.glide.load.model.ModelLoader")) {
             AppIconLoader.display(into, this);
@@ -135,7 +127,6 @@ public class App implements Parcelable {
         mName = in.readString();
         mCode = in.readString();
         mPkg = in.readString();
-        mRequested = in.readByte() != 0x00;
     }
 
     @Override
@@ -148,7 +139,6 @@ public class App implements Parcelable {
         dest.writeString(mName);
         dest.writeString(mCode);
         dest.writeString(mPkg);
-        dest.writeByte((byte) (mRequested ? 0x01 : 0x00));
     }
 
     @SuppressWarnings("unused")

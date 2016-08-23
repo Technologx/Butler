@@ -27,6 +27,7 @@ class IRUtils {
     }
 
     public static String drawableName(String appName) {
+        if (Character.isDigit(appName.charAt(0))) appName = "a_" + appName;
         return appName.toLowerCase(Locale.getDefault()).replace(" ", "_");
     }
 

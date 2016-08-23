@@ -18,6 +18,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.CallSuper;
 import android.support.annotation.CheckResult;
+import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
@@ -53,8 +54,6 @@ public final class IconRequest {
     private ArrayList<App> mSelectedApps;
     private transient Handler mHandler;
 
-    private static final String builderKey = "builder", appsKey = "apps", selectedKey = "selected_apps";
-
     private static IconRequest mRequest;
 
     private IconRequest() {
@@ -77,9 +76,11 @@ public final class IconRequest {
         protected String mFilterName = "appfilter.xml";
         protected String mEmail = null;
         protected String mSubject = "Icon Request";
-        protected String mHeader = "These apps aren't themed on my device, theme them please!";
+        protected String mHeader = "These apps aren't themed. Thanks in advance";
         protected String mFooter = null;
+        protected int mMaxCount = 0;
         protected boolean mIncludeDeviceInfo = true;
+        protected boolean mComments = true;
         protected boolean mGenerateAppFilterXml = true;
         protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
@@ -136,6 +137,16 @@ public final class IconRequest {
             if (args != null && footer != null)
                 footer = String.format(footer, args);
             mFooter = footer;
+            return this;
+        }
+
+        public Builder maxSelectionCount(@IntRange(from = 0) int count) {
+            mMaxCount = count;
+            return this;
+        }
+
+        public Builder withComments(boolean b) {
+            mComments = b;
             return this;
         }
 
@@ -196,7 +207,9 @@ public final class IconRequest {
             dest.writeString(this.mSubject);
             dest.writeString(this.mHeader);
             dest.writeString(this.mFooter);
+            dest.writeInt(this.mMaxCount);
             dest.writeByte(this.mIncludeDeviceInfo ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mComments ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterJson ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mErrorOnInvalidAppFilterDrawable ? (byte) 1 : (byte) 0);
@@ -210,14 +223,16 @@ public final class IconRequest {
             this.mSubject = in.readString();
             this.mHeader = in.readString();
             this.mFooter = in.readString();
+            this.mMaxCount = in.readInt();
             this.mIncludeDeviceInfo = in.readByte() != 0;
+            this.mComments = in.readByte() != 0;
             this.mGenerateAppFilterXml = in.readByte() != 0;
             this.mGenerateAppFilterJson = in.readByte() != 0;
             this.mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
             this.mDebugMode = in.readByte() != 0;
         }
 
-        public static final Parcelable.Creator<Builder> CREATOR = new Parcelable.Creator<Builder>() {
+        public static final Creator<Builder> CREATOR = new Creator<Builder>() {
             @Override
             public Builder createFromParcel(Parcel source) {
                 return new Builder(source);
@@ -489,6 +504,7 @@ public final class IconRequest {
     }
 
     public boolean selectApp(@NonNull App app) {
+        if (mSelectedApps.size() >= mBuilder.mMaxCount) return false;
         if (!mSelectedApps.contains(app)) {
             mSelectedApps.add(app);
             if (mBuilder.mSelectionCallback != null)
@@ -524,6 +540,7 @@ public final class IconRequest {
             if (!mSelectedApps.contains(app)) {
                 changed = true;
                 mSelectedApps.add(app);
+                if (mSelectedApps.size() >= mBuilder.mMaxCount) break;
             }
         }
         if (changed && mBuilder.mSelectionCallback != null)
@@ -610,7 +627,7 @@ public final class IconRequest {
                     final BitmapDrawable bDrawable = (BitmapDrawable) drawable;
                     final Bitmap icon = bDrawable.getBitmap();
                     final File file = new File(mBuilder.mSaveDir,
-                            String.format("%s.png", app.generateFileName())); //TODO check
+                            String.format("%s.png", IRUtils.drawableName(app.getName()))); //TODO check
                     filesToZip.add(file);
                     try {
                         FileUtil.writeIcon(file, icon);
@@ -641,9 +658,12 @@ public final class IconRequest {
                     final String name = app.getName();
                     final String drawableName = IRUtils.drawableName(name);
                     if (xmlSb != null) {
-                        xmlSb.append("\n\n\t<!-- ");
-                        xmlSb.append(name);
-                        xmlSb.append(" -->\n");
+                        xmlSb.append("\n\n");
+                        if (mBuilder.mComments) {
+                            xmlSb.append("\t<!-- ")
+                                    .append(name)
+                                    .append(" -->\n");
+                        }
                         xmlSb.append(String.format("\t<item\n" +
                                         "\t\tcomponent=\"ComponentInfo{%s}\"\n" +
                                         "\t\tdrawable=\"%s\" />",
@@ -651,18 +671,21 @@ public final class IconRequest {
                     }
                     if (jsonSb != null) {
                         if (index > 0) jsonSb.append(",");
-                        jsonSb.append("\n        {\n");
-                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\",\n", "name", name));
-                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\",\n", "pkg", app.getPackage()));
-                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\",\n", "componentInfo", app.getCode()));
-                        jsonSb.append(String.format("\t\t\t\"%s\": \"%s\"\n", "drawable", drawableName));
-                        jsonSb.append("\t\t}");
+                        jsonSb.append("\n        {\n")
+                                .append(String.format("\t\t\t\"%s\": \"%s\",\n", "name", name))
+                                .append(String.format("\t\t\t\"%s\": \"%s\",\n", "pkg", app.getPackage()))
+                                .append(String.format("\t\t\t\"%s\": \"%s\",\n", "componentInfo", app.getCode()))
+                                .append(String.format("\t\t\t\"%s\": \"%s\"\n", "drawable", drawableName))
+                                .append("\t\t}");
                     }
                     index++;
                 }
+
+                String date = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+
                 if (xmlSb != null) {
                     xmlSb.append("\n\n</resources>");
-                    final File newAppFilter = new File(mBuilder.mSaveDir, "appfilter.xml");
+                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format("appfilter_%s.xml", date));
                     filesToZip.add(newAppFilter);
                     try {
                         FileUtil.writeAll(newAppFilter, xmlSb.toString());
@@ -674,7 +697,7 @@ public final class IconRequest {
                 }
                 if (jsonSb != null) {
                     jsonSb.append("\n    ]\n}");
-                    final File newAppFilter = new File(mBuilder.mSaveDir, "appfilter.json");
+                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format("appfilter_%s.json", date));
                     filesToZip.add(newAppFilter);
                     try {
                         FileUtil.writeAll(newAppFilter, jsonSb.toString());
@@ -692,9 +715,9 @@ public final class IconRequest {
 
                 // Zip everything into an archive
                 IRLog.d("Creating ZIP...");
-                final SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd", Locale.getDefault());
+
                 final File zipFile = new File(mBuilder.mSaveDir,
-                        String.format("IconRequest-%s.zip", df.format(new Date())));
+                        String.format("IconRequest-%s.zip", date));
                 try {
                     ZipUtil.zip(zipFile, filesToZip.toArray(new File[filesToZip.size()]));
                 } catch (final Exception e) {
@@ -736,9 +759,9 @@ public final class IconRequest {
 
     public static void saveInstanceState(Bundle outState) {
         if (mRequest == null || outState == null) return;
-        outState.putParcelable(builderKey, mRequest.mBuilder);
-        outState.putParcelableArrayList(appsKey, mRequest.mApps);
-        outState.putParcelableArrayList(selectedKey, mRequest.mSelectedApps);
+        outState.putParcelable("builder", mRequest.mBuilder);
+        outState.putParcelableArrayList("apps", mRequest.mApps);
+        outState.putParcelableArrayList("selected_apps", mRequest.mSelectedApps);
     }
 
     @SuppressWarnings("unchecked")
@@ -750,8 +773,8 @@ public final class IconRequest {
         if (inState == null)
             return null;
         mRequest = new IconRequest();
-        if (inState.containsKey(builderKey)) {
-            mRequest.mBuilder = inState.getParcelable(builderKey);
+        if (inState.containsKey("builder")) {
+            mRequest.mBuilder = inState.getParcelable("builder");
             if (mRequest.mBuilder != null) {
                 mRequest.mBuilder.mContext = context;
                 mRequest.mBuilder.mLoadCallback = loadCb;
@@ -759,10 +782,10 @@ public final class IconRequest {
                 mRequest.mBuilder.mSelectionCallback = selectionCb;
             }
         }
-        if (inState.containsKey(appsKey))
-            mRequest.mApps = inState.getParcelableArrayList(appsKey);
-        if (inState.containsKey(selectedKey))
-            mRequest.mSelectedApps = inState.getParcelableArrayList(selectedKey);
+        if (inState.containsKey("apps"))
+            mRequest.mApps = inState.getParcelableArrayList("apps");
+        if (inState.containsKey("selected_apps"))
+            mRequest.mSelectedApps = inState.getParcelableArrayList("selected_apps");
         if (mRequest.mApps == null)
             mRequest.mApps = new ArrayList<>();
         if (mRequest.mSelectedApps == null)

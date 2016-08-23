@@ -29,12 +29,17 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.Reques
     public RequestsHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_app_to_request, parent, false);
-        return new RequestsHolder(view, this);
+        return new RequestsHolder(view, viewType);
     }
 
     @Override
     public int getItemCount() {
         return getApps() != null ? getApps().size() : 0;
+    }
+
+    @Override
+    public int getItemViewType (int position) {
+        return position;
     }
 
     @Override
@@ -53,23 +58,22 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.Reques
         final ImageView imgIcon;
         final TextView txtName;
         final AppCompatCheckBox checkBox;
-        final RequestsAdapter adapter;
+        final int position;
 
-        public RequestsHolder(View v, RequestsAdapter adapter) {
+        public RequestsHolder(View v, int i) {
             super(v);
             imgIcon = (ImageView) v.findViewById(R.id.imgIcon);
             txtName = (TextView) v.findViewById(R.id.txtName);
             checkBox = (AppCompatCheckBox) v.findViewById(R.id.chkSelected);
-            this.adapter = adapter;
+            position = i;
             v.setOnClickListener(this);
         }
 
         @Override
         public void onClick(View view) {
             final IconRequest ir = IconRequest.get();
-            if (ir != null) {
-                //noinspection ConstantConditions
-                final App app = ir.getApps().get(getAdapterPosition());
+            if (ir != null && ir.getApps() != null) {
+                final App app = ir.getApps().get(position);
                 ir.toggleAppSelected(app);
                 checkBox.setChecked(ir.isAppSelected(app));
             }

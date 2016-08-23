@@ -33,6 +33,9 @@ import java.util.Locale;
  * Created by Allan Wang on 2016-08-20.
  */
 public class RequestFragment extends CapsuleFragment implements AppsLoadCallback, RequestSendCallback, AppsSelectionListener {
+
+    private int mMaxCount = 9;
+
     @Override
     public void onFabClick(View v) {
         getPermissions(new CPermissionCallback() {
@@ -63,7 +66,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
     private RecyclerView mRV;
     private ProgressBar mProgress;
     private RequestsAdapter mAdapter;
-    private long start, end;
+    private long start;
 
     private void log(String s, @Nullable Object... o) {
         Log.e("ButlerSample", String.format(Locale.getDefault(), s, o));
@@ -77,11 +80,12 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
                     .withHeader("Hey, testing Icon Request!")
                     .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
                     .withSubject("Icon Request - Just a Test")
+                    .maxSelectionCount(mMaxCount)
                     .toEmail("fake-email@fake-website.com")
                     .saveDir(new File(Environment.getExternalStorageDirectory(), "Pitched_Apps/Capsule"))
-                    .includeDeviceInfo(true) // defaults to true anyways
-                    .generateAppFilterXml(true) // defaults to true anyways
-                    .generateAppFilterJson(true)
+                    .includeDeviceInfo(true)
+                    .generateAppFilterXml(true)
+                    .generateAppFilterJson(false)
                     .loadCallback(this)
                     .sendCallback(this)
                     .selectionCallback(this)
@@ -121,9 +125,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
 
     @Override
     public void onAppsLoaded(ArrayList<App> apps, Exception e) {
-        end = System.currentTimeMillis();
-        log("LOAD TIME %d MS", end - start);
-        snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", end - start), Snackbar.LENGTH_LONG);
+        snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System.currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
         mProgress.setVisibility(View.GONE);
         mRV.setVisibility(View.VISIBLE);
         mAdapter.notifyDataSetChanged();
@@ -150,7 +152,9 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
 
     @Override
     public void onAppSelectionChanged(int selectedCount) {
-
+        if (selectedCount >= mMaxCount) {
+            snackbar("Max 9 icons selected", Snackbar.LENGTH_LONG);
+        }
     }
 
     @Override

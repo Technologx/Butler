@@ -79,7 +79,7 @@ class ComponentInfoUtil {
 
 //            IRLog.d("Loaded %s", launchStr);
             final String name = ai.loadLabel(pm).toString();
-            apps.add(new App(name, launchStr, ai.packageName, false));
+            apps.add(new App(name, launchStr, ai.packageName));
 
             loaded++;
             final int percent = (loaded / appInfos.size()) * 100;
@@ -132,7 +132,7 @@ class ComponentInfoUtil {
 
 //            IRLog.d("Loaded %s", launchStr);
             final String name = ri.loadLabel(pm).toString();
-            apps.add(new App(name, launchStr, ri.activityInfo.packageName, false));
+            apps.add(new App(name, launchStr, ri.activityInfo.packageName));
 
             loaded++;
             final int percent = (loaded / packageList.size()) * 100;
