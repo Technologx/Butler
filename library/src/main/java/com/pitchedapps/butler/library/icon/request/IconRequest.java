@@ -662,7 +662,7 @@ public final class IconRequest {
                     final BitmapDrawable bDrawable = (BitmapDrawable) drawable;
                     final Bitmap icon = bDrawable.getBitmap();
                     final File file = new File(mBuilder.mSaveDir,
-                            String.format("%s.png", IRUtils.drawableName(app.getName()))); //TODO check
+                            String.format("%s.png", IRUtils.drawableName(app.getName())));
                     filesToZip.add(file);
                     try {
                         FileUtil.writeIcon(file, icon);

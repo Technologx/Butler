@@ -11,7 +11,7 @@ import java.util.Locale;
 /**
  * Created by Allan Wang on 2016-08-20.
  */
-class IRUtils {
+public class IRUtils {
 
     public static boolean isEmpty(@Nullable String str) {
         return str == null || str.trim().isEmpty();
