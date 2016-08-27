@@ -599,7 +599,7 @@ public final class IconRequest {
                 IRLog.e(msg, baseError);
                 EventBus.getDefault().post(new RequestEvent(false, false, new Exception(msg, baseError)));
             }
-        }); //TODO add logging?
+        });
     }
 
     public void send() {

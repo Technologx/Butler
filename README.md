@@ -1,6 +1,12 @@
 # Butler
 Here to serve you an easier way of coding.
 
+##IconRequests
+This library contains a singleton that will help process the request and supply callbacks.
+The settings are created with a builder, and all the callbacks are handled through EventBus.
+Possible events posted: AppLoadingEvent, AppLoadedEvent, AppSelectionEvent, RequestEvent
+Each with their own helper methods. Subscribe to these events anywhere!
+
 To apply, add the following to your root build.gradle:
 
 ```gradle

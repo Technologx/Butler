@@ -133,14 +133,12 @@ class ComponentInfoUtil {
 
             loaded++;
             final int percent = (loaded / packageList.size()) * 100;
-//            if (cb != null) { //TODO fix
-//                handler.post(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        cb.onAppsLoadProgress(percent);
-//                    }
-//                });
-//            }
+            handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        EventBus.getDefault().post(new AppLoadingEvent(percent));
+                    }
+                });
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
