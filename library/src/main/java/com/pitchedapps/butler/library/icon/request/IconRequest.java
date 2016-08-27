@@ -23,11 +23,11 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
 import android.support.annotation.XmlRes;
-import android.support.v4.app.NotificationCompat;
 import android.text.Html;
 
 import com.pitchedapps.butler.library.R;
 
+import org.greenrobot.eventbus.EventBus;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -86,12 +86,7 @@ public final class IconRequest {
         protected boolean mGenerateAppFilterXml = true;
         protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
-        protected boolean mIsLoaded = false;
-
         protected boolean mDebugMode = false;
-        protected transient AppsLoadCallback mLoadCallback;
-        protected transient RequestSendCallback mSendCallback;
-        protected transient AppsSelectionListener mSelectionCallback;
 
         public Builder() {
         }
@@ -164,21 +159,6 @@ public final class IconRequest {
             return this;
         }
 
-        public Builder loadCallback(@Nullable AppsLoadCallback cb) {
-            mLoadCallback = cb;
-            return this;
-        }
-
-        public Builder sendCallback(@Nullable RequestSendCallback cb) {
-            mSendCallback = cb;
-            return this;
-        }
-
-        public Builder selectionCallback(@Nullable AppsSelectionListener cb) {
-            mSelectionCallback = cb;
-            return this;
-        }
-
         public Builder generateAppFilterXml(boolean generate) {
             mGenerateAppFilterXml = generate;
             return this;
@@ -224,7 +204,6 @@ public final class IconRequest {
             dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterJson ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mErrorOnInvalidAppFilterDrawable ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mIsLoaded ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mDebugMode ? (byte) 1 : (byte) 0);
         }
 
@@ -243,7 +222,6 @@ public final class IconRequest {
             this.mGenerateAppFilterXml = in.readByte() != 0;
             this.mGenerateAppFilterJson = in.readByte() != 0;
             this.mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
-            this.mIsLoaded = in.readByte() != 0;
             this.mDebugMode = in.readByte() != 0;
         }
 
@@ -258,10 +236,6 @@ public final class IconRequest {
                 return new Builder[size];
             }
         };
-    }
-
-    public boolean isLoaded() {
-        return mBuilder != null && mBuilder.mIsLoaded;
     }
 
     public static Builder start(Context context) {
@@ -340,15 +314,12 @@ public final class IconRequest {
             is = am.open(mBuilder.mFilterName);
         } catch (final Throwable e) {
             e.printStackTrace();
-            if (mBuilder.mLoadCallback != null) {
-                post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mBuilder.mIsLoaded = true;
-                        mBuilder.mLoadCallback.onAppsLoaded(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e));
-                    }
-                });
-            }
+            post(new Runnable() {
+                @Override
+                public void run() {
+                    EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)));
+                }
+            });
             IRUtils.stopTimer("LFAReader");
             return null;
         }
@@ -435,12 +406,11 @@ public final class IconRequest {
             }
 
             if (mInvalidDrawables != null && mInvalidDrawables.length() > 0 &&
-                    mBuilder.mErrorOnInvalidAppFilterDrawable && mBuilder.mLoadCallback != null) {
+                    mBuilder.mErrorOnInvalidAppFilterDrawable) {
                 post(new Runnable() {
                     @Override
                     public void run() {
-                        mBuilder.mIsLoaded = true;
-                        mBuilder.mLoadCallback.onAppsLoaded(null, new Exception(mInvalidDrawables.toString()));
+                        EventBus.getDefault().post(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())));
                         mInvalidDrawables.setLength(0);
                         mInvalidDrawables.trimToSize();
                         mInvalidDrawables = null;
@@ -450,15 +420,12 @@ public final class IconRequest {
             IRLog.d("Found %d total app(s) in your appfilter.", defined.size());
         } catch (final Throwable e) {
             e.printStackTrace();
-            if (mBuilder.mLoadCallback != null) {
-                post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mBuilder.mIsLoaded = true;
-                        mBuilder.mLoadCallback.onAppsLoaded(null, new Exception("Failed to read your filter: " + e.getMessage(), e));
-                    }
-                });
-            }
+            post(new Runnable() {
+                @Override
+                public void run() {
+                    EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)));
+                }
+            });
             IRUtils.stopTimer("LFAReader");
             return null;
         } finally {
@@ -469,12 +436,14 @@ public final class IconRequest {
         return defined;
     }
 
+    public int getMaxSelectable() {
+        return mBuilder.mMaxCount;
+    }
+
     public void loadApps() {
-        if (mBuilder.mLoadCallback == null)
-            throw new IllegalStateException("No load callback has been set.");
         if (mHandler == null)
             mHandler = new Handler();
-        mBuilder.mLoadCallback.onLoadingFilter();
+        EventBus.getDefault().post(new AppLoadingEvent(-1));
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -483,13 +452,12 @@ public final class IconRequest {
                 if (filter == null) return;
                 IRLog.d("Loading unthemed installed apps...");
                 mApps = ComponentInfoUtil.getInstalledApps2(mBuilder.mContext, //TODO finish testing
-                        filter, mBuilder.mLoadCallback, mHandler);
+                        filter, mHandler);
                 post(new Runnable() {
                     @Override
                     public void run() {
                         if (mBuilder.mDebugMode) IRUtils.stopTimer("IR_debug_auto");
-                        mBuilder.mIsLoaded = true;
-                        mBuilder.mLoadCallback.onAppsLoaded(mApps, null);
+                        EventBus.getDefault().post(new AppLoadedEvent(mApps, null));
                     }
                 });
             }
@@ -551,8 +519,7 @@ public final class IconRequest {
         if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) return false;
         if (!mSelectedApps.contains(app)) {
             mSelectedApps.add(app);
-            if (mBuilder.mSelectionCallback != null)
-                mBuilder.mSelectionCallback.onAppSelectionChanged(mSelectedApps.size());
+            EventBus.getDefault().post(new AppSelectionEvent(mSelectedApps.size()));
             return true;
         }
         return false;
@@ -560,8 +527,8 @@ public final class IconRequest {
 
     public boolean unselectApp(@NonNull App app) {
         final boolean result = mSelectedApps.remove(app);
-        if (result && mBuilder.mSelectionCallback != null)
-            mBuilder.mSelectionCallback.onAppSelectionChanged(mSelectedApps.size());
+        if (result)
+            EventBus.getDefault().post(new AppSelectionEvent(mSelectedApps.size()));
         return result;
     }
 
@@ -587,19 +554,18 @@ public final class IconRequest {
                 if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) break;
             }
         }
-        if (changed && mBuilder.mSelectionCallback != null)
-            mBuilder.mSelectionCallback.onAppSelectionChanged(mSelectedApps.size());
+        if (changed)
+            EventBus.getDefault().post(new AppSelectionEvent(mSelectedApps.size()));
         return this;
     }
 
     public void unselectAllApps() {
         if (mSelectedApps == null || mSelectedApps.size() == 0) return;
         mSelectedApps.clear();
-        if (mBuilder.mSelectionCallback != null)
-            mBuilder.mSelectionCallback.onAppSelectionChanged(0);
+        EventBus.getDefault().post(new AppSelectionEvent(0));
     }
 
-    public boolean isAppsLoaded() {
+    public boolean isLoaded() {
         return getApps() != null && getApps().size() > 0;
     }
 
@@ -627,22 +593,18 @@ public final class IconRequest {
 
     @WorkerThread
     private void postError(@NonNull final String msg, @Nullable final Exception baseError) {
-        if (mBuilder.mSendCallback != null) {
-            post(new Runnable() {
-                @Override
-                public void run() {
-                    mBuilder.mSendCallback.onRequestError(new Exception(msg, baseError));
-                }
-            });
-        } else {
-            throw new IllegalStateException(msg, baseError);
-        }
+        post(new Runnable() {
+            @Override
+            public void run() {
+                IRLog.e(msg, baseError);
+                EventBus.getDefault().post(new RequestEvent(false, false, new Exception(msg, baseError)));
+            }
+        }); //TODO add logging?
     }
 
     public void send() {
         IRLog.d("Preparing your request to send...");
-        if (mBuilder.mSendCallback != null)
-            mBuilder.mSendCallback.onRequestPreparing();
+        EventBus.getDefault().post(new RequestEvent(true, false, null));
         if (mHandler == null)
             mHandler = new Handler();
 
@@ -797,8 +759,7 @@ public final class IconRequest {
                         mBuilder.mContext.startActivity(Intent.createChooser(
                                 emailIntent, mBuilder.mContext.getString(R.string.send_using)));
 
-                        if (mBuilder.mSendCallback != null)
-                            mBuilder.mSendCallback.onRequestSent();
+                        EventBus.getDefault().post(new RequestEvent(false, true, null));
                     }
                 });
             }
@@ -814,10 +775,7 @@ public final class IconRequest {
 
     @SuppressWarnings("unchecked")
     @Nullable
-    public static IconRequest restoreInstanceState(Context context, Bundle inState,
-                                                   AppsLoadCallback loadCb,
-                                                   @Nullable RequestSendCallback sendCb,
-                                                   @Nullable AppsSelectionListener selectionCb) {
+    public static IconRequest restoreInstanceState(Context context, Bundle inState) {
         if (inState == null)
             return null;
         mRequest = new IconRequest();
@@ -825,9 +783,6 @@ public final class IconRequest {
             mRequest.mBuilder = inState.getParcelable("builder");
             if (mRequest.mBuilder != null) {
                 mRequest.mBuilder.mContext = context;
-                mRequest.mBuilder.mLoadCallback = loadCb;
-                mRequest.mBuilder.mSendCallback = sendCb;
-                mRequest.mBuilder.mSelectionCallback = selectionCb;
             }
         }
         if (inState.containsKey("apps"))
@@ -838,8 +793,8 @@ public final class IconRequest {
             mRequest.mApps = new ArrayList<>();
         if (mRequest.mSelectedApps == null)
             mRequest.mSelectedApps = new ArrayList<>();
-        else if (mRequest.mSelectedApps.size() > 0 && selectionCb != null)
-            selectionCb.onAppSelectionChanged(mRequest.mSelectedApps.size());
+        else if (mRequest.mSelectedApps.size() > 0)
+            EventBus.getDefault().post(new AppSelectionEvent(mRequest.mSelectedApps.size()));
         return mRequest;
     }
 

@@ -3,11 +3,9 @@ package com.pitchedapps.butler.request;
 import android.Manifest;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,15 +13,14 @@ import android.widget.ProgressBar;
 
 import com.pitchedapps.butler.BuildConfig;
 import com.pitchedapps.butler.R;
-import com.pitchedapps.butler.library.icon.request.App;
-import com.pitchedapps.butler.library.icon.request.AppsLoadCallback;
-import com.pitchedapps.butler.library.icon.request.AppsSelectionListener;
-import com.pitchedapps.butler.library.icon.request.IRLog;
+import com.pitchedapps.butler.library.icon.request.AppLoadedEvent;
 import com.pitchedapps.butler.library.icon.request.IconRequest;
-import com.pitchedapps.butler.library.icon.request.RequestSendCallback;
 import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
 import com.pitchedapps.capsule.library.permissions.CPermissionCallback;
 import com.pitchedapps.capsule.library.permissions.PermissionResult;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -32,7 +29,7 @@ import java.util.Locale;
 /**
  * Created by Allan Wang on 2016-08-20.
  */
-public class RequestFragment extends CapsuleFragment implements AppsLoadCallback {
+public class RequestFragment extends CapsuleFragment {
 
     @Override
     public void onFabClick(View v) {
@@ -61,6 +58,18 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
         return true;
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
+
     private RecyclerView mRV;
     private ProgressBar mProgress;
     private RequestsAdapter mAdapter;
@@ -79,7 +88,6 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
                     .includeDeviceInfo(true)
                     .generateAppFilterXml(true)
                     .generateAppFilterJson(false)
-                    .loadCallback(this)
                     .filterOff()
                     .debugMode(true)
                     .build();
@@ -102,7 +110,7 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
         mProgress = (ProgressBar) v.findViewById(R.id.progress);
 
         if (savedInstanceState != null)
-            IconRequest.restoreInstanceState(getActivity(), savedInstanceState, this, null, null);
+            IconRequest.restoreInstanceState(getActivity(), savedInstanceState);
 
         start = System.currentTimeMillis();
 
@@ -110,21 +118,15 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
     }
 
 
-    @Override
-    public void onLoadingFilter() {
-    }
 
-    @Override
-    public void onAppsLoaded(ArrayList<App> apps, Exception e) {
+
+    @Subscribe
+    public void onAppsLoaded(AppLoadedEvent event) {
         snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System.currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
         mProgress.setVisibility(View.GONE);
         mRV.setVisibility(View.VISIBLE);
         mAdapter.notifyDataSetChanged();
         IconRequest.get().loadHighResIcons();
-    }
-
-    @Override
-    public void onAppsLoadProgress(int percent) {
     }
 
     @Override

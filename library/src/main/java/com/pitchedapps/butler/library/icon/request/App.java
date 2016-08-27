@@ -17,8 +17,6 @@ import android.widget.ImageView;
 
 import com.pitchedapps.butler.library.icon.request.glide.AppIconLoader;
 
-import java.util.regex.Pattern;
-
 /**
  * Created by Allan Wang on 2016-08-20.
  */
@@ -30,9 +28,6 @@ public class App implements Parcelable {
 
     private transient Drawable mIcon;
     private transient Drawable mIconHighRes;
-
-    public App() {
-    }
 
     App(String name, String code, String pkg) {
         mName = name;

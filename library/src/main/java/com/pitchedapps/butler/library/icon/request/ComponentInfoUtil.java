@@ -7,13 +7,13 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Handler;
 
+import org.greenrobot.eventbus.EventBus;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-
-import timber.log.Timber;
 
 /**
  * Created by Allan Wang on 2016-08-20.
@@ -44,7 +44,6 @@ class ComponentInfoUtil {
 
     public static ArrayList<App> getInstalledApps(final Context context,
                                                   final HashSet<String> filter,
-                                                  final AppsLoadCallback cb,
                                                   final Handler handler) {
         IRUtils.startTimer("getInstalledApps");
         final PackageManager pm = context.getPackageManager();
@@ -83,14 +82,13 @@ class ComponentInfoUtil {
 
             loaded++;
             final int percent = (loaded / appInfos.size()) * 100;
-            if (cb != null) {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        cb.onAppsLoadProgress(percent);
+                        EventBus.getDefault().post(new AppLoadingEvent(percent));
                     }
                 });
-            }
+
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
@@ -100,7 +98,6 @@ class ComponentInfoUtil {
 
     public static ArrayList<App> getInstalledApps2(final Context context,
                                                    final HashSet<String> filter,
-                                                   final AppsLoadCallback cb,
                                                    final Handler handler) {
         IRUtils.startTimer("getInstalledApps2");
         final PackageManager pm = context.getPackageManager();
@@ -136,14 +133,14 @@ class ComponentInfoUtil {
 
             loaded++;
             final int percent = (loaded / packageList.size()) * 100;
-            if (cb != null) {
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        cb.onAppsLoadProgress(percent);
-                    }
-                });
-            }
+//            if (cb != null) { //TODO fix
+//                handler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        cb.onAppsLoadProgress(percent);
+//                    }
+//                });
+//            }
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);

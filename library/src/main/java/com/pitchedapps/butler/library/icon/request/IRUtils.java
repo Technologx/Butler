@@ -3,7 +3,6 @@ package com.pitchedapps.butler.library.icon.request;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import java.util.HashMap;
 import java.util.Locale;
