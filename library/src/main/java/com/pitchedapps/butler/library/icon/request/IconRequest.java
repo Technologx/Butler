@@ -86,6 +86,7 @@ public final class IconRequest {
         protected boolean mGenerateAppFilterXml = true;
         protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
+        protected boolean mIsLoaded = false;
 
         protected boolean mDebugMode = false;
         protected transient AppsLoadCallback mLoadCallback;
@@ -223,6 +224,7 @@ public final class IconRequest {
             dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterJson ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mErrorOnInvalidAppFilterDrawable ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mIsLoaded ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mDebugMode ? (byte) 1 : (byte) 0);
         }
 
@@ -241,6 +243,7 @@ public final class IconRequest {
             this.mGenerateAppFilterXml = in.readByte() != 0;
             this.mGenerateAppFilterJson = in.readByte() != 0;
             this.mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
+            this.mIsLoaded = in.readByte() != 0;
             this.mDebugMode = in.readByte() != 0;
         }
 
@@ -255,6 +258,10 @@ public final class IconRequest {
                 return new Builder[size];
             }
         };
+    }
+
+    public boolean isLoaded() {
+        return mBuilder != null && mBuilder.mIsLoaded;
     }
 
     public static Builder start(Context context) {
@@ -337,6 +344,7 @@ public final class IconRequest {
                 post(new Runnable() {
                     @Override
                     public void run() {
+                        mBuilder.mIsLoaded = true;
                         mBuilder.mLoadCallback.onAppsLoaded(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e));
                     }
                 });
@@ -431,6 +439,7 @@ public final class IconRequest {
                 post(new Runnable() {
                     @Override
                     public void run() {
+                        mBuilder.mIsLoaded = true;
                         mBuilder.mLoadCallback.onAppsLoaded(null, new Exception(mInvalidDrawables.toString()));
                         mInvalidDrawables.setLength(0);
                         mInvalidDrawables.trimToSize();
@@ -445,6 +454,7 @@ public final class IconRequest {
                 post(new Runnable() {
                     @Override
                     public void run() {
+                        mBuilder.mIsLoaded = true;
                         mBuilder.mLoadCallback.onAppsLoaded(null, new Exception("Failed to read your filter: " + e.getMessage(), e));
                     }
                 });
@@ -478,6 +488,7 @@ public final class IconRequest {
                     @Override
                     public void run() {
                         if (mBuilder.mDebugMode) IRUtils.stopTimer("IR_debug_auto");
+                        mBuilder.mIsLoaded = true;
                         mBuilder.mLoadCallback.onAppsLoaded(mApps, null);
                     }
                 });
