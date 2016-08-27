@@ -66,10 +66,6 @@ public class RequestFragment extends CapsuleFragment implements AppsLoadCallback
     private RequestsAdapter mAdapter;
     private long start;
 
-    private void log(String s, @Nullable Object... o) {
-        Log.e("ButlerSample", String.format(Locale.getDefault(), s, o));
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

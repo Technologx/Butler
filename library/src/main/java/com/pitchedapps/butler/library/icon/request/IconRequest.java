@@ -468,6 +468,7 @@ public final class IconRequest {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                if (mBuilder.mDebugMode) IRUtils.startTimer("IR_debug_auto");
                 final HashSet<String> filter = loadFilterApps();
                 if (filter == null) return;
                 IRLog.d("Loading unthemed installed apps...");
@@ -476,6 +477,7 @@ public final class IconRequest {
                 post(new Runnable() {
                     @Override
                     public void run() {
+                        if (mBuilder.mDebugMode) IRUtils.stopTimer("IR_debug_auto");
                         mBuilder.mLoadCallback.onAppsLoaded(mApps, null);
                     }
                 });
@@ -845,6 +847,7 @@ public final class IconRequest {
             mRequest.mSelectedApps.clear();
             mRequest.mSelectedApps = null;
         }
+        IRUtils.clearTimers();
         mRequest = null;
     }
 }

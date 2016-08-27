@@ -83,12 +83,16 @@ public class IRUtils {
 
     public static void stopTimer(@NonNull String key) {
         if (mTimers == null || !mTimers.containsKey(key)) {
-            Log.e("Invalid timer", key);
+            IRLog.e("Invalid timer", key);
             return;
         }
         long timeDiff = System.currentTimeMillis() - mTimers.get(key);
-        Log.d("Timer " + key, "took " + timeDiff + "ms");
+        IRLog.d("Timer " + key, "took " + timeDiff + "ms");
         mTimers.remove(key);
         if (mTimers.isEmpty()) mTimers = null;
+    }
+
+    public static void clearTimers() {
+        mTimers = null;
     }
 }
