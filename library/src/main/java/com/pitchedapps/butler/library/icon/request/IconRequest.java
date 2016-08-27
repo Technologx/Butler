@@ -768,7 +768,7 @@ public final class IconRequest {
 
     public static void saveInstanceState(Bundle outState) {
         if (mRequest == null || outState == null) return;
-        outState.putParcelable("builder", mRequest.mBuilder);
+        outState.putParcelable("butler_builder", mRequest.mBuilder);
         outState.putParcelableArrayList("apps", mRequest.mApps);
         outState.putParcelableArrayList("selected_apps", mRequest.mSelectedApps);
     }
@@ -776,14 +776,12 @@ public final class IconRequest {
     @SuppressWarnings("unchecked")
     @Nullable
     public static IconRequest restoreInstanceState(Context context, Bundle inState) {
-        if (inState == null)
+        if (inState == null || !inState.containsKey("butler_builder"))
             return null;
         mRequest = new IconRequest();
-        if (inState.containsKey("builder")) {
-            mRequest.mBuilder = inState.getParcelable("builder");
-            if (mRequest.mBuilder != null) {
-                mRequest.mBuilder.mContext = context;
-            }
+        mRequest.mBuilder = inState.getParcelable("butler_builder");
+        if (mRequest.mBuilder != null) {
+            mRequest.mBuilder.mContext = context;
         }
         if (inState.containsKey("apps"))
             mRequest.mApps = inState.getParcelableArrayList("apps");
