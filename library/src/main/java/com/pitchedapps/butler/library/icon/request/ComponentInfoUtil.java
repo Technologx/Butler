@@ -42,10 +42,11 @@ class ComponentInfoUtil {
     }
 
     public static ArrayList<App> getInstalledApps(final Context context,
-                                                  final HashSet<String> filter) {
+                                                  final HashSet<String> filter,
+                                                  final EventState loadingState) {
         IRUtils.startTimer("getInstalledApps");
         final PackageManager pm = context.getPackageManager();
-        EventBus.getDefault().postSticky(new AppLoadingEvent(-1));
+        EventBusUtils.post(new AppLoadingEvent(-1), loadingState);
         final List<ResolveInfo> packageList =
                 pm.queryIntentActivities(
                         new Intent("android.intent.action.MAIN")
@@ -72,7 +73,7 @@ class ComponentInfoUtil {
 
             loaded++;
             final int percent = (loaded * 100 / packageList.size());
-            EventBus.getDefault().postSticky(new AppLoadingEvent(percent));
+            EventBusUtils.post(new AppLoadingEvent(percent), loadingState);
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);

@@ -65,11 +65,9 @@
             android:id="@+id/text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/progress"
             android:layout_gravity="center"
             android:gravity="center"
-            android:text="test"
-            android:padding="@dimen/dialog_margin"
+            android:layout_marginTop="50dp"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             android:textStyle="italic" />
 

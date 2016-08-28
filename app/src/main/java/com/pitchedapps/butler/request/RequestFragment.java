@@ -6,11 +6,9 @@ import android.os.Environment;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -18,6 +16,7 @@ import com.pitchedapps.butler.BuildConfig;
 import com.pitchedapps.butler.R;
 import com.pitchedapps.butler.library.icon.request.AppLoadedEvent;
 import com.pitchedapps.butler.library.icon.request.AppLoadingEvent;
+import com.pitchedapps.butler.library.icon.request.EventState;
 import com.pitchedapps.butler.library.icon.request.IconRequest;
 import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
 import com.pitchedapps.capsule.library.permissions.CPermissionCallback;
@@ -29,7 +28,6 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Locale;
 
 /**
@@ -93,6 +91,10 @@ public class RequestFragment extends CapsuleFragment {
                     .includeDeviceInfo(true)
                     .generateAppFilterXml(true)
                     .generateAppFilterJson(false)
+                    .requestEvents(EventState.DISABLED)
+                    .loadedEvents(EventState.ENABLED)
+                    .loadingEvents(EventState.DISABLED)
+                    .selectionEvents(EventState.DISABLED)
                     .filterOff()
                     .debugMode(true)
                     .build().loadApps();
@@ -102,7 +104,11 @@ public class RequestFragment extends CapsuleFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        EventBus.builder().
+        EventBus.builder()
+                .logNoSubscriberMessages(false)
+                .sendNoSubscriberEvent(false)
+                .throwSubscriberException(false)
+                .installDefaultEventBus();
         setupRequest();
     }
 
@@ -131,7 +137,7 @@ public class RequestFragment extends CapsuleFragment {
     }
 
 
-    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    @Subscribe(threadMode = ThreadMode.MAIN)
     public void onAppsLoaded(AppLoadedEvent event) {
         EventBus.getDefault().removeStickyEvent(event.getClass());
         mViewGroup.removeView(mLoadingView);
@@ -141,7 +147,7 @@ public class RequestFragment extends CapsuleFragment {
         IconRequest.get().loadHighResIcons();
     }
 
-    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    @Subscribe(threadMode = ThreadMode.MAIN)
     public void onAppsLoading(AppLoadingEvent event) {
         EventBus.getDefault().removeStickyEvent(event.getClass());
         mText.setText(event.getString());
