@@ -6,21 +6,27 @@ import android.os.Environment;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.pitchedapps.butler.BuildConfig;
 import com.pitchedapps.butler.R;
 import com.pitchedapps.butler.library.icon.request.AppLoadedEvent;
+import com.pitchedapps.butler.library.icon.request.AppLoadingEvent;
 import com.pitchedapps.butler.library.icon.request.IconRequest;
 import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
 import com.pitchedapps.capsule.library.permissions.CPermissionCallback;
 import com.pitchedapps.capsule.library.permissions.PermissionResult;
+import com.pluscubed.recyclerfastscroll.RecyclerFastScroller;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -62,6 +68,7 @@ public class RequestFragment extends CapsuleFragment {
     public void onStart() {
         super.onStart();
         EventBus.getDefault().register(this);
+        setupRequest();
     }
 
     @Override
@@ -71,15 +78,14 @@ public class RequestFragment extends CapsuleFragment {
     }
 
     private RecyclerView mRV;
-    private ProgressBar mProgress;
-    private RequestsAdapter mAdapter;
+    private RelativeLayout mLoadingView;
     private long start;
+    private ViewGroup mViewGroup;
+    private TextView mText;
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    private void setupRequest() {
         if (IconRequest.get() == null) {
-            IconRequest request = IconRequest.start(getActivity())
+            IconRequest.start(getActivity())
                     .withHeader("Hey, testing Icon Request!")
                     .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
                     .withSubject("Icon Request - Just a Test")
@@ -90,24 +96,30 @@ public class RequestFragment extends CapsuleFragment {
                     .generateAppFilterJson(false)
                     .filterOff()
                     .debugMode(true)
-                    .build();
-            request.loadApps();
+                    .build().loadApps();
         }
     }
+//    @Override
+//    public void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//
+//    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
 
-        View v = inflater.inflate(R.layout.content_main, container, false);
+        View v = inflater.inflate(R.layout.icon_request_section, container, false);
 
-        mRV = (RecyclerView) v.findViewById(R.id.rv);
+        mViewGroup = (ViewGroup) v.findViewById(R.id.viewgroup);
+        mText = (TextView) v.findViewById(R.id.text);
+        mRV = (RecyclerView) v.findViewById(R.id.appsToRequestList);
         LinearLayoutManager llm = new LinearLayoutManager(getActivity());
         mRV.setLayoutManager(llm);
-        mAdapter = new RequestsAdapter();
-        mRV.setAdapter(mAdapter);
         mRV.setHasFixedSize(true);
-        mProgress = (ProgressBar) v.findViewById(R.id.progress);
+        mLoadingView = (RelativeLayout) v.findViewById(R.id.loading_view);
+        RecyclerFastScroller mFastScroller = (RecyclerFastScroller) v.findViewById(R.id.rvFastScroller);
+        mFastScroller.attachRecyclerView(mRV);
 
         if (savedInstanceState != null)
             IconRequest.restoreInstanceState(getActivity(), savedInstanceState);
@@ -120,13 +132,18 @@ public class RequestFragment extends CapsuleFragment {
 
 
 
-    @Subscribe
+    @Subscribe(threadMode = ThreadMode.MAIN)
     public void onAppsLoaded(AppLoadedEvent event) {
+        mViewGroup.removeView(mLoadingView);
         snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System.currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
-        mProgress.setVisibility(View.GONE);
-        mRV.setVisibility(View.VISIBLE);
-        mAdapter.notifyDataSetChanged();
+        RequestsAdapter mAdapter = new RequestsAdapter();
+        mRV.setAdapter(mAdapter);
         IconRequest.get().loadHighResIcons();
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onAppsLoading(AppLoadingEvent event) {
+        mText.setText(event.getString());
     }
 
     @Override

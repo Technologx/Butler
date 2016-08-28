@@ -317,13 +317,8 @@ public final class IconRequest {
             is = am.open(mBuilder.mFilterName);
         } catch (final Throwable e) {
             e.printStackTrace();
-            post(new Runnable() {
-                @Override
-                public void run() {
-                    mBuilder.mIsLoading = false;
-                    EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)));
-                }
-            });
+            mBuilder.mIsLoading = false;
+            EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)));
             IRUtils.stopTimer("LFAReader");
             return null;
         }
@@ -411,27 +406,18 @@ public final class IconRequest {
 
             if (mInvalidDrawables != null && mInvalidDrawables.length() > 0 &&
                     mBuilder.mErrorOnInvalidAppFilterDrawable) {
-                post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mBuilder.mIsLoading = false;
-                        EventBus.getDefault().post(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())));
-                        mInvalidDrawables.setLength(0);
-                        mInvalidDrawables.trimToSize();
-                        mInvalidDrawables = null;
-                    }
-                });
+                mBuilder.mIsLoading = false;
+                EventBus.getDefault().post(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())));
+                mInvalidDrawables.setLength(0);
+                mInvalidDrawables.trimToSize();
+                mInvalidDrawables = null;
             }
             IRLog.d("Found %d total app(s) in your appfilter.", defined.size());
         } catch (final Throwable e) {
             e.printStackTrace();
-            post(new Runnable() {
-                @Override
-                public void run() {
-                    mBuilder.mIsLoading = false;
-                    EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)));
-                }
-            });
+            mBuilder.mIsLoading = false;
+            EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)));
+
             IRUtils.stopTimer("LFAReader");
             return null;
         } finally {
@@ -458,15 +444,10 @@ public final class IconRequest {
                 final HashSet<String> filter = loadFilterApps();
                 if (filter == null) return;
                 IRLog.d("Loading unthemed installed apps...");
-                mApps = ComponentInfoUtil.getInstalledApps(mBuilder.mContext, filter, mHandler);
-                post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (mBuilder.mDebugMode) IRUtils.stopTimer("IR_debug_auto");
-                        mBuilder.mIsLoading = false;
-                        EventBus.getDefault().post(new AppLoadedEvent(mApps, null));
-                    }
-                });
+                mApps = ComponentInfoUtil.getInstalledApps(mBuilder.mContext, filter);
+                if (mBuilder.mDebugMode) IRUtils.stopTimer("IR_debug_auto");
+                mBuilder.mIsLoading = false;
+                EventBus.getDefault().post(new AppLoadedEvent(mApps, null));
             }
         }).start();
     }
@@ -604,13 +585,8 @@ public final class IconRequest {
 
     @WorkerThread
     private void postError(@NonNull final String msg, @Nullable final Exception baseError) {
-        post(new Runnable() {
-            @Override
-            public void run() {
-                IRLog.e(msg, baseError);
-                EventBus.getDefault().post(new RequestEvent(false, false, new Exception(msg, baseError)));
-            }
-        });
+        IRLog.e(msg, baseError);
+        EventBus.getDefault().post(new RequestEvent(false, false, new Exception(msg, baseError)));
     }
 
     public void send() {
@@ -755,9 +731,9 @@ public final class IconRequest {
                         fi.delete();
                 }
 
-                post(new Runnable() {
-                    @Override
-                    public void run() {
+//                post(new Runnable() {
+//                    @Override
+//                    public void run() {
                         // Send email intent
                         IRLog.d("Launching intent!");
                         final Uri zipUri = Uri.fromFile(zipFile);
@@ -771,8 +747,8 @@ public final class IconRequest {
                                 emailIntent, mBuilder.mContext.getString(R.string.send_using)));
 
                         EventBus.getDefault().post(new RequestEvent(false, true, null));
-                    }
-                });
+//                    }
+//                }); //TODO verify
             }
         }).start();
     }

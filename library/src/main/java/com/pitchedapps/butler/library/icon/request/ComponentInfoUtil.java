@@ -2,10 +2,9 @@ package com.pitchedapps.butler.library.icon.request;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.os.Handler;
+import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -43,8 +42,7 @@ class ComponentInfoUtil {
     }
 
     public static ArrayList<App> getInstalledApps(final Context context,
-                                                  final HashSet<String> filter,
-                                                  final Handler handler) {
+                                                  final HashSet<String> filter) {
         IRUtils.startTimer("getInstalledApps");
         final PackageManager pm = context.getPackageManager();
         final List<ResolveInfo> packageList =
@@ -72,13 +70,8 @@ class ComponentInfoUtil {
             apps.add(new App(name.toString(), launchStr, ri.activityInfo.packageName));
 
             loaded++;
-            final int percent = (loaded / packageList.size()) * 100;
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    EventBus.getDefault().post(new AppLoadingEvent(percent));
-                }
-            });
+            final int percent = (loaded * 100 / packageList.size());
+            EventBus.getDefault().post(new AppLoadingEvent(percent));
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
