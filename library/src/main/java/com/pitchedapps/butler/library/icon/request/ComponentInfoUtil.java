@@ -32,19 +32,19 @@ class ComponentInfoUtil {
         public int compare(ResolveInfo ra, ResolveInfo rb) {
             CharSequence sa = ra.loadLabel(mPM);
             if (sa == null) {
-                sa = ra.resolvePackageName;
+                sa = ra.activityInfo.packageName;
             }
-            CharSequence sb = ra.loadLabel(mPM);
+            CharSequence sb = rb.loadLabel(mPM);
             if (sb == null) {
-                sb = rb.resolvePackageName;
+                sb = rb.activityInfo.packageName;
             }
             return sa.toString().compareTo(sb.toString());
         }
     }
 
     public static ArrayList<App> getInstalledApps(final Context context,
-                                                   final HashSet<String> filter,
-                                                   final Handler handler) {
+                                                  final HashSet<String> filter,
+                                                  final Handler handler) {
         IRUtils.startTimer("getInstalledApps");
         final PackageManager pm = context.getPackageManager();
         final List<ResolveInfo> packageList =
@@ -67,17 +67,18 @@ class ComponentInfoUtil {
             }
 
 //            IRLog.d("Loaded %s", launchStr);
-            final String name = ri.loadLabel(pm).toString();
-            apps.add(new App(name, launchStr, ri.activityInfo.packageName));
+            CharSequence name = ri.loadLabel(pm);
+            if (name == null) name = ri.activityInfo.packageName;
+            apps.add(new App(name.toString(), launchStr, ri.activityInfo.packageName));
 
             loaded++;
             final int percent = (loaded / packageList.size()) * 100;
             handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        EventBus.getDefault().post(new AppLoadingEvent(percent));
-                    }
-                });
+                @Override
+                public void run() {
+                    EventBus.getDefault().post(new AppLoadingEvent(percent));
+                }
+            });
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);
