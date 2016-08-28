@@ -318,7 +318,7 @@ public final class IconRequest {
         } catch (final Throwable e) {
             e.printStackTrace();
             mBuilder.mIsLoading = false;
-            EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)));
+            EventBus.getDefault().postSticky(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)));
             IRUtils.stopTimer("LFAReader");
             return null;
         }
@@ -407,7 +407,7 @@ public final class IconRequest {
             if (mInvalidDrawables != null && mInvalidDrawables.length() > 0 &&
                     mBuilder.mErrorOnInvalidAppFilterDrawable) {
                 mBuilder.mIsLoading = false;
-                EventBus.getDefault().post(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())));
+                EventBus.getDefault().postSticky(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())));
                 mInvalidDrawables.setLength(0);
                 mInvalidDrawables.trimToSize();
                 mInvalidDrawables = null;
@@ -416,7 +416,7 @@ public final class IconRequest {
         } catch (final Throwable e) {
             e.printStackTrace();
             mBuilder.mIsLoading = false;
-            EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)));
+            EventBus.getDefault().postSticky(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)));
 
             IRUtils.stopTimer("LFAReader");
             return null;
@@ -436,7 +436,7 @@ public final class IconRequest {
         mBuilder.mIsLoading = true;
         if (mHandler == null)
             mHandler = new Handler();
-        EventBus.getDefault().post(new AppLoadingEvent(-1));
+        EventBus.getDefault().postSticky(new AppLoadingEvent(-2));
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -447,7 +447,7 @@ public final class IconRequest {
                 mApps = ComponentInfoUtil.getInstalledApps(mBuilder.mContext, filter);
                 if (mBuilder.mDebugMode) IRUtils.stopTimer("IR_debug_auto");
                 mBuilder.mIsLoading = false;
-                EventBus.getDefault().post(new AppLoadedEvent(mApps, null));
+                EventBus.getDefault().postSticky(new AppLoadedEvent(mApps, null));
             }
         }).start();
     }
@@ -507,7 +507,7 @@ public final class IconRequest {
         if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) return false;
         if (!mSelectedApps.contains(app)) {
             mSelectedApps.add(app);
-            EventBus.getDefault().post(new AppSelectionEvent(mSelectedApps.size()));
+            EventBus.getDefault().postSticky(new AppSelectionEvent(mSelectedApps.size()));
             return true;
         }
         return false;
@@ -516,7 +516,7 @@ public final class IconRequest {
     public boolean unselectApp(@NonNull App app) {
         final boolean result = mSelectedApps.remove(app);
         if (result)
-            EventBus.getDefault().post(new AppSelectionEvent(mSelectedApps.size()));
+            EventBus.getDefault().postSticky(new AppSelectionEvent(mSelectedApps.size()));
         return result;
     }
 
@@ -543,14 +543,14 @@ public final class IconRequest {
             }
         }
         if (changed)
-            EventBus.getDefault().post(new AppSelectionEvent(mSelectedApps.size()));
+            EventBus.getDefault().postSticky(new AppSelectionEvent(mSelectedApps.size()));
         return this;
     }
 
     public void unselectAllApps() {
         if (mSelectedApps == null || mSelectedApps.size() == 0) return;
         mSelectedApps.clear();
-        EventBus.getDefault().post(new AppSelectionEvent(0));
+        EventBus.getDefault().postSticky(new AppSelectionEvent(0));
     }
 
     public boolean isNotEmpty() {
@@ -586,12 +586,12 @@ public final class IconRequest {
     @WorkerThread
     private void postError(@NonNull final String msg, @Nullable final Exception baseError) {
         IRLog.e(msg, baseError);
-        EventBus.getDefault().post(new RequestEvent(false, false, new Exception(msg, baseError)));
+        EventBus.getDefault().postSticky(new RequestEvent(false, false, new Exception(msg, baseError)));
     }
 
     public void send() {
         IRLog.d("Preparing your request to send...");
-        EventBus.getDefault().post(new RequestEvent(true, false, null));
+        EventBus.getDefault().postSticky(new RequestEvent(true, false, null));
         if (mHandler == null)
             mHandler = new Handler();
 
@@ -746,7 +746,7 @@ public final class IconRequest {
                         mBuilder.mContext.startActivity(Intent.createChooser(
                                 emailIntent, mBuilder.mContext.getString(R.string.send_using)));
 
-                        EventBus.getDefault().post(new RequestEvent(false, true, null));
+                        EventBus.getDefault().postSticky(new RequestEvent(false, true, null));
 //                    }
 //                }); //TODO verify
             }
@@ -779,7 +779,7 @@ public final class IconRequest {
         if (mRequest.mSelectedApps == null)
             mRequest.mSelectedApps = new ArrayList<>();
         else if (mRequest.mSelectedApps.size() > 0)
-            EventBus.getDefault().post(new AppSelectionEvent(mRequest.mSelectedApps.size()));
+            EventBus.getDefault().postSticky(new AppSelectionEvent(mRequest.mSelectedApps.size()));
         return mRequest;
     }
 

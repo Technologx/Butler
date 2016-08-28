@@ -6,6 +6,8 @@ This library contains a singleton that will help process the request and supply 
 The settings are created with a builder, and all the callbacks are handled through EventBus.
 Possible events posted: AppLoadingEvent, AppLoadedEvent, AppSelectionEvent, RequestEvent
 Each with their own helper methods. Subscribe to these events anywhere!
+Please note that all eventbus posts are stickied as a user can always quit the view.
+Handle them accordingly and look at the samplea app for further help.
 
 To apply, add the following to your root build.gradle:
 

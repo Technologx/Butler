@@ -22,9 +22,13 @@ public class AppLoadingEvent {
     }
 
     public String getString() {
-        if (percent == -1) {
-            return "Loading Appfilter...";
+        switch (percent) {
+            case -2:
+                return "Loading Appfilter...";
+            case -1:
+                return "Retrieving App List...";
+            default:
+                return String.format(Locale.getDefault(), "Loading %d%%", percent);
         }
-        return String.format(Locale.getDefault(), "Loading %d%%", percent);
     }
 }

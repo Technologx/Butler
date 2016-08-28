@@ -68,7 +68,6 @@ public class RequestFragment extends CapsuleFragment {
     public void onStart() {
         super.onStart();
         EventBus.getDefault().register(this);
-        setupRequest();
     }
 
     @Override
@@ -99,11 +98,13 @@ public class RequestFragment extends CapsuleFragment {
                     .build().loadApps();
         }
     }
-//    @Override
-//    public void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//
-//    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+//        EventBus.builder().
+        setupRequest();
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -130,10 +131,9 @@ public class RequestFragment extends CapsuleFragment {
     }
 
 
-
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onAppsLoaded(AppLoadedEvent event) {
+        EventBus.getDefault().removeStickyEvent(event.getClass());
         mViewGroup.removeView(mLoadingView);
         snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System.currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
         RequestsAdapter mAdapter = new RequestsAdapter();
@@ -141,8 +141,9 @@ public class RequestFragment extends CapsuleFragment {
         IconRequest.get().loadHighResIcons();
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onAppsLoading(AppLoadingEvent event) {
+        EventBus.getDefault().removeStickyEvent(event.getClass());
         mText.setText(event.getString());
     }
 
