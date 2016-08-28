@@ -42,6 +42,28 @@ class ComponentInfoUtil {
         }
     }
 
+    private static class NameComparator2 implements Comparator<ResolveInfo> {
+
+        private PackageManager mPM;
+
+        public NameComparator2(PackageManager pm) {
+            mPM = pm;
+        }
+
+        @Override
+        public int compare(ResolveInfo ra, ResolveInfo rb) {
+            CharSequence sa = mPM.getApplicationLabel(ra.activityInfo.applicationInfo);
+            if (sa == null) {
+                sa = ra.resolvePackageName;
+            }
+            CharSequence sb = mPM.getApplicationLabel(rb.activityInfo.applicationInfo);
+            if (sb == null) {
+                sb = rb.resolvePackageName;
+            }
+            return sa.toString().compareTo(sb.toString());
+        }
+    }
+
     public static ArrayList<App> getInstalledApps(final Context context,
                                                   final HashSet<String> filter,
                                                   final Handler handler) {
@@ -105,14 +127,7 @@ class ComponentInfoUtil {
                 pm.queryIntentActivities(
                         new Intent("android.intent.action.MAIN")
                                 .addCategory("android.intent.category.LAUNCHER"), 0);
-        Collections.sort(packageList, new Comparator<ResolveInfo>() {
-            @Override
-            public int compare(ResolveInfo a, ResolveInfo b) {
-                String initialName = pm.getApplicationLabel(a.activityInfo.applicationInfo).toString();
-                String finalName = pm.getApplicationLabel(b.activityInfo.applicationInfo).toString();
-                return initialName.compareToIgnoreCase(finalName);
-            }
-        });
+        Collections.sort(packageList, new NameComparator2(pm));
 
         final ArrayList<App> apps = new ArrayList<>();
 
