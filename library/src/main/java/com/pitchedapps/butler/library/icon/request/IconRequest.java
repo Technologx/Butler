@@ -79,6 +79,7 @@ public final class IconRequest {
         protected String mHeader = "These apps aren't themed. Thanks in advance";
         protected String mFooter = null;
         protected int mMaxCount = 0;
+        protected boolean mIsLoading = false;
         protected boolean mHasMaxCount = false;
         protected boolean mNoneSelectsAll = true;
         protected boolean mIncludeDeviceInfo = true;
@@ -197,6 +198,7 @@ public final class IconRequest {
             dest.writeString(this.mHeader);
             dest.writeString(this.mFooter);
             dest.writeInt(this.mMaxCount);
+            dest.writeByte(this.mIsLoading ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mHasMaxCount ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mNoneSelectsAll ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mIncludeDeviceInfo ? (byte) 1 : (byte) 0);
@@ -215,6 +217,7 @@ public final class IconRequest {
             this.mHeader = in.readString();
             this.mFooter = in.readString();
             this.mMaxCount = in.readInt();
+            this.mIsLoading = in.readByte() != 0;
             this.mHasMaxCount = in.readByte() != 0;
             this.mNoneSelectsAll = in.readByte() != 0;
             this.mIncludeDeviceInfo = in.readByte() != 0;
@@ -317,6 +320,7 @@ public final class IconRequest {
             post(new Runnable() {
                 @Override
                 public void run() {
+                    mBuilder.mIsLoading = false;
                     EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)));
                 }
             });
@@ -410,6 +414,7 @@ public final class IconRequest {
                 post(new Runnable() {
                     @Override
                     public void run() {
+                        mBuilder.mIsLoading = false;
                         EventBus.getDefault().post(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())));
                         mInvalidDrawables.setLength(0);
                         mInvalidDrawables.trimToSize();
@@ -423,6 +428,7 @@ public final class IconRequest {
             post(new Runnable() {
                 @Override
                 public void run() {
+                    mBuilder.mIsLoading = false;
                     EventBus.getDefault().post(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)));
                 }
             });
@@ -441,6 +447,7 @@ public final class IconRequest {
     }
 
     public void loadApps() {
+        mBuilder.mIsLoading = true;
         if (mHandler == null)
             mHandler = new Handler();
         EventBus.getDefault().post(new AppLoadingEvent(-1));
@@ -457,6 +464,7 @@ public final class IconRequest {
                     @Override
                     public void run() {
                         if (mBuilder.mDebugMode) IRUtils.stopTimer("IR_debug_auto");
+                        mBuilder.mIsLoading = false;
                         EventBus.getDefault().post(new AppLoadedEvent(mApps, null));
                     }
                 });
@@ -565,8 +573,12 @@ public final class IconRequest {
         EventBus.getDefault().post(new AppSelectionEvent(0));
     }
 
-    public boolean isLoaded() {
+    public boolean isNotEmpty() {
         return getApps() != null && getApps().size() > 0;
+    }
+
+    public boolean isLoading() {
+        return mBuilder.mIsLoading;
     }
 
     @Nullable
