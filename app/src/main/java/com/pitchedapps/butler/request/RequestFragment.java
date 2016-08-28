@@ -104,9 +104,9 @@ public class RequestFragment extends CapsuleFragment {
         mRV = (RecyclerView) v.findViewById(R.id.rv);
         LinearLayoutManager llm = new LinearLayoutManager(getActivity());
         mRV.setLayoutManager(llm);
-        mRV.setHasFixedSize(true);
         mAdapter = new RequestsAdapter();
         mRV.setAdapter(mAdapter);
+        mRV.setHasFixedSize(true);
         mProgress = (ProgressBar) v.findViewById(R.id.progress);
 
         if (savedInstanceState != null)

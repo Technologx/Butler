@@ -458,8 +458,7 @@ public final class IconRequest {
                 final HashSet<String> filter = loadFilterApps();
                 if (filter == null) return;
                 IRLog.d("Loading unthemed installed apps...");
-                mApps = ComponentInfoUtil.getInstalledApps2(mBuilder.mContext, //TODO finish testing
-                        filter, mHandler);
+                mApps = ComponentInfoUtil.getInstalledApps(mBuilder.mContext, filter, mHandler);
                 post(new Runnable() {
                     @Override
                     public void run() {
