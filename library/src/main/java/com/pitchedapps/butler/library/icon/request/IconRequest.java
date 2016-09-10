@@ -3,6 +3,8 @@ package com.pitchedapps.butler.library.icon.request;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
@@ -25,6 +27,7 @@ import android.support.annotation.WorkerThread;
 import android.support.annotation.XmlRes;
 import android.text.Html;
 
+import com.pitchedapps.butler.library.BuildConfig;
 import com.pitchedapps.butler.library.R;
 
 import org.greenrobot.eventbus.EventBus;
@@ -525,10 +528,13 @@ public final class IconRequest {
         }
 
         if (mBuilder.mIncludeDeviceInfo) {
-            sb.append(String.format(Locale.getDefault(),
-                    "<br/><br/>OS: %s %s<br/>Device: %s %s (%s)",
-                    Build.VERSION.RELEASE, IRUtils.getOSVersionName(Build.VERSION.SDK_INT),
-                    Build.MANUFACTURER, Build.MODEL, Build.PRODUCT));
+            sb.append("<br/><br/><br/>OS Version: ").append(System.getProperty("os.version")).append("(").append(Build.VERSION.INCREMENTAL).append(")");
+            sb.append("<br/>OS API Level: ").append(Build.VERSION.SDK_INT);
+            sb.append("<br/>Device: ").append(Build.DEVICE);
+            sb.append("<br/>Manufacturer: ").append(Build.MANUFACTURER);
+            sb.append("<br/>Model (and Product): ").append(Build.MODEL).append(" (").append(Build.PRODUCT).append(")");
+            sb.append("<br/>App Version Name: ").append(BuildConfig.VERSION_NAME);
+            sb.append("<br/>App Version Code: ").append(BuildConfig.VERSION_CODE);
             if (mBuilder.mFooter != null) {
                 sb.append("<br/>");
                 sb.append(mBuilder.mFooter.replace("\n", "<br/>"));
