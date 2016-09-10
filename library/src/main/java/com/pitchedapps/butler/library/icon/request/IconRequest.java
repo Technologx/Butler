@@ -73,7 +73,7 @@ public final class IconRequest {
 
         protected transient Context mContext;
         protected File mSaveDir = null;
-        protected String mFilterName = "appfilter.xml";
+        protected int mFilterId= R.xml.appfilter;
         protected String mEmail = null;
         protected String mSubject = "Icon Request";
         protected String mHeader = "These apps aren't themed. Thanks in advance";
@@ -89,7 +89,7 @@ public final class IconRequest {
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
         protected boolean mDebugMode = false;
         protected EventState mLoadingState = EventState.DISABLED,
-                mLoadedState = EventState.ENABLED,
+                mLoadedState = EventState.STICKIED,
                 mSelectionState = EventState.DISABLED,
                 mRequestState = EventState.DISABLED;
 
@@ -102,13 +102,13 @@ public final class IconRequest {
             FileUtil.wipe(mSaveDir);
         }
 
-        public Builder filterName(@NonNull String filterName) {
-            mFilterName = filterName;
+        public Builder filterXmlId(@XmlRes int resId) {
+            mFilterId = resId;
             return this;
         }
 
         public Builder filterOff() {
-            mFilterName = null;
+            mFilterId = -1;
             return this;
         }
 
@@ -216,7 +216,7 @@ public final class IconRequest {
         @Override
         public void writeToParcel(Parcel dest, int flags) {
             dest.writeSerializable(this.mSaveDir);
-            dest.writeString(this.mFilterName);
+            dest.writeInt(this.mFilterId);
             dest.writeString(this.mEmail);
             dest.writeString(this.mSubject);
             dest.writeString(this.mHeader);
@@ -239,7 +239,7 @@ public final class IconRequest {
 
         protected Builder(Parcel in) {
             this.mSaveDir = (File) in.readSerializable();
-            this.mFilterName = in.readString();
+            this.mFilterId = in.readInt();
             this.mEmail = in.readString();
             this.mSubject = in.readString();
             this.mHeader = in.readString();
@@ -288,17 +288,18 @@ public final class IconRequest {
     private StringBuilder mInvalidDrawables;
 
     @CallSuper
+    @CheckResult
     @Nullable
-    private HashSet<String> loadFilterApps(@XmlRes int appfilterId) {
+    private HashSet<String> loadFilterApps() {
         IRUtils.startTimer("LFAXML");
         final HashSet<String> defined = new HashSet<>();
-        if (IRUtils.isEmpty(mBuilder.mFilterName)) { //TODO add this
+        if (mBuilder.mFilterId == -1) { //TODO add this
             IRUtils.stopTimer("LFAXML");
             return defined;
         }
         XmlResourceParser parser = null;
         try {
-            parser = mBuilder.mContext.getResources().getXml(appfilterId);
+            parser = mBuilder.mContext.getResources().getXml(mBuilder.mFilterId);
             String mAppCode = null;
             int eventType = parser.getEventType();
             while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -336,133 +337,133 @@ public final class IconRequest {
         return defined;
     }
 
-    @CheckResult
-    @Nullable
-    private HashSet<String> loadFilterApps() {
-        IRUtils.startTimer("LFAReader");
-        final HashSet<String> defined = new HashSet<>();
-        if (IRUtils.isEmpty(mBuilder.mFilterName)) {
-            IRUtils.stopTimer("LFAReader");
-            return defined;
-        }
-
-        InputStream is;
-        try {
-            final AssetManager am = mBuilder.mContext.getAssets();
-            IRLog.d("Loading your appfilter, opening: %s", mBuilder.mFilterName);
-            is = am.open(mBuilder.mFilterName);
-        } catch (final Throwable e) {
-            e.printStackTrace();
-            mBuilder.mIsLoading = false;
-            EventBusUtils.post(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)), mBuilder.mLoadedState);
-            IRUtils.stopTimer("LFAReader");
-            return null;
-        }
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        try {
-            final String itemEndStr = "/>";
-            final String componentStartStr = "component=\"ComponentInfo";
-            final String drawableStartStr = "drawable=\"";
-            final String endStr = "\"";
-            final String commentStart = "<!--";
-            final String commentEnd = "-->";
-
-            String component = null;
-            String drawable = null;
-
-            String line;
-            boolean inComment = false;
-
-            while ((line = reader.readLine()) != null) {
-                final String trimmedLine = line.trim();
-                if (!inComment && trimmedLine.startsWith(commentStart)) {
-                    inComment = true;
-                }
-                if (inComment && trimmedLine.endsWith(commentEnd)) {
-                    inComment = false;
-                    continue;
-                }
-
-                if (inComment) continue;
-                int start;
-                int end;
-
-                start = line.indexOf(componentStartStr);
-                if (start != -1) {
-                    start += componentStartStr.length();
-                    end = line.indexOf(endStr, start);
-                    String ci = line.substring(start, end);
-                    if (ci.startsWith("{"))
-                        ci = ci.substring(1);
-                    if (ci.endsWith("}"))
-                        ci = ci.substring(0, ci.length() - 1);
-                    component = ci;
-                }
-
-                start = line.indexOf(drawableStartStr);
-                if (start != -1) {
-                    start += drawableStartStr.length();
-                    end = line.indexOf(endStr, start);
-                    drawable = line.substring(start, end);
-                }
-
-                start = line.indexOf(itemEndStr);
-                if (start != -1 && (component != null || drawable != null)) {
-                    IRLog.d("Found: %s (%s)", component, drawable);
-                    if (drawable == null || drawable.trim().isEmpty()) {
-                        IRLog.d("WARNING: Drawable shouldn't be null.");
-                        if (mBuilder.mErrorOnInvalidAppFilterDrawable) {
-                            if (mInvalidDrawables == null)
-                                mInvalidDrawables = new StringBuilder();
-                            if (mInvalidDrawables.length() > 0) mInvalidDrawables.append("\n");
-                            mInvalidDrawables.append(String.format("Drawable for %s was null or empty.\n", component));
-                        }
-                    } else if (mBuilder.mContext != null) {
-                        final Resources r = mBuilder.mContext.getResources();
-                        int identifier;
-                        try {
-                            identifier = r.getIdentifier(drawable, "drawable", mBuilder.mContext.getPackageName());
-                        } catch (Throwable t) {
-                            identifier = 0;
-                        }
-                        if (identifier == 0) {
-                            IRLog.d("WARNING: Drawable %s (for %s) doesn't match up with a resource.", drawable, component);
-                            if (mBuilder.mErrorOnInvalidAppFilterDrawable) {
-                                if (mInvalidDrawables == null)
-                                    mInvalidDrawables = new StringBuilder();
-                                if (mInvalidDrawables.length() > 0) mInvalidDrawables.append("\n");
-                                mInvalidDrawables.append(String.format("Drawable %s (for %s) doesn't match up with a resource.\n", drawable, component));
-                            }
-                        }
-                    }
-                    defined.add(component);
-                }
-            }
-
-            if (mInvalidDrawables != null && mInvalidDrawables.length() > 0 &&
-                    mBuilder.mErrorOnInvalidAppFilterDrawable) {
-                mBuilder.mIsLoading = false;
-                EventBusUtils.post(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())), mBuilder.mLoadedState);
-                mInvalidDrawables.setLength(0);
-                mInvalidDrawables.trimToSize();
-                mInvalidDrawables = null;
-            }
-            IRLog.d("Found %d total app(s) in your appfilter.", defined.size());
-        } catch (final Throwable e) {
-            e.printStackTrace();
-            mBuilder.mIsLoading = false;
-            EventBusUtils.post(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)), mBuilder.mLoadedState);
-
-            IRUtils.stopTimer("LFAReader");
-            return null;
-        } finally {
-            FileUtil.closeQuietely(reader);
-            FileUtil.closeQuietely(is);
-        }
-        IRUtils.stopTimer("LFAReader");
-        return defined;
-    }
+//    @CheckResult
+//    @Nullable
+//    private HashSet<String> loadFilterApps2() {
+//        IRUtils.startTimer("LFAReader");
+//        final HashSet<String> defined = new HashSet<>();
+//        if (IRUtils.isEmpty(mBuilder.mFilterName)) {
+//            IRUtils.stopTimer("LFAReader");
+//            return defined;
+//        }
+//
+//        InputStream is;
+//        try {
+//            final AssetManager am = mBuilder.mContext.getAssets();
+//            IRLog.d("Loading your appfilter, opening: %s", mBuilder.mFilterName);
+//            is = am.open(mBuilder.mFilterName);
+//        } catch (final Throwable e) {
+//            e.printStackTrace();
+//            mBuilder.mIsLoading = false;
+//            EventBusUtils.post(new AppLoadedEvent(null, new Exception("Failed to open your filter: " + e.getLocalizedMessage(), e)), mBuilder.mLoadedState);
+//            IRUtils.stopTimer("LFAReader");
+//            return null;
+//        }
+//
+//        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+//        try {
+//            final String itemEndStr = "/>";
+//            final String componentStartStr = "component=\"ComponentInfo";
+//            final String drawableStartStr = "drawable=\"";
+//            final String endStr = "\"";
+//            final String commentStart = "<!--";
+//            final String commentEnd = "-->";
+//
+//            String component = null;
+//            String drawable = null;
+//
+//            String line;
+//            boolean inComment = false;
+//
+//            while ((line = reader.readLine()) != null) {
+//                final String trimmedLine = line.trim();
+//                if (!inComment && trimmedLine.startsWith(commentStart)) {
+//                    inComment = true;
+//                }
+//                if (inComment && trimmedLine.endsWith(commentEnd)) {
+//                    inComment = false;
+//                    continue;
+//                }
+//
+//                if (inComment) continue;
+//                int start;
+//                int end;
+//
+//                start = line.indexOf(componentStartStr);
+//                if (start != -1) {
+//                    start += componentStartStr.length();
+//                    end = line.indexOf(endStr, start);
+//                    String ci = line.substring(start, end);
+//                    if (ci.startsWith("{"))
+//                        ci = ci.substring(1);
+//                    if (ci.endsWith("}"))
+//                        ci = ci.substring(0, ci.length() - 1);
+//                    component = ci;
+//                }
+//
+//                start = line.indexOf(drawableStartStr);
+//                if (start != -1) {
+//                    start += drawableStartStr.length();
+//                    end = line.indexOf(endStr, start);
+//                    drawable = line.substring(start, end);
+//                }
+//
+//                start = line.indexOf(itemEndStr);
+//                if (start != -1 && (component != null || drawable != null)) {
+//                    IRLog.d("Found: %s (%s)", component, drawable);
+//                    if (drawable == null || drawable.trim().isEmpty()) {
+//                        IRLog.d("WARNING: Drawable shouldn't be null.");
+//                        if (mBuilder.mErrorOnInvalidAppFilterDrawable) {
+//                            if (mInvalidDrawables == null)
+//                                mInvalidDrawables = new StringBuilder();
+//                            if (mInvalidDrawables.length() > 0) mInvalidDrawables.append("\n");
+//                            mInvalidDrawables.append(String.format("Drawable for %s was null or empty.\n", component));
+//                        }
+//                    } else if (mBuilder.mContext != null) {
+//                        final Resources r = mBuilder.mContext.getResources();
+//                        int identifier;
+//                        try {
+//                            identifier = r.getIdentifier(drawable, "drawable", mBuilder.mContext.getPackageName());
+//                        } catch (Throwable t) {
+//                            identifier = 0;
+//                        }
+//                        if (identifier == 0) {
+//                            IRLog.d("WARNING: Drawable %s (for %s) doesn't match up with a resource.", drawable, component);
+//                            if (mBuilder.mErrorOnInvalidAppFilterDrawable) {
+//                                if (mInvalidDrawables == null)
+//                                    mInvalidDrawables = new StringBuilder();
+//                                if (mInvalidDrawables.length() > 0) mInvalidDrawables.append("\n");
+//                                mInvalidDrawables.append(String.format("Drawable %s (for %s) doesn't match up with a resource.\n", drawable, component));
+//                            }
+//                        }
+//                    }
+//                    defined.add(component);
+//                }
+//            }
+//
+//            if (mInvalidDrawables != null && mInvalidDrawables.length() > 0 &&
+//                    mBuilder.mErrorOnInvalidAppFilterDrawable) {
+//                mBuilder.mIsLoading = false;
+//                EventBusUtils.post(new AppLoadedEvent(null, new Exception(mInvalidDrawables.toString())), mBuilder.mLoadedState);
+//                mInvalidDrawables.setLength(0);
+//                mInvalidDrawables.trimToSize();
+//                mInvalidDrawables = null;
+//            }
+//            IRLog.d("Found %d total app(s) in your appfilter.", defined.size());
+//        } catch (final Throwable e) {
+//            e.printStackTrace();
+//            mBuilder.mIsLoading = false;
+//            EventBusUtils.post(new AppLoadedEvent(null, new Exception("Failed to read your filter: " + e.getMessage(), e)), mBuilder.mLoadedState);
+//
+//            IRUtils.stopTimer("LFAReader");
+//            return null;
+//        } finally {
+//            FileUtil.closeQuietely(reader);
+//            FileUtil.closeQuietely(is);
+//        }
+//        IRUtils.stopTimer("LFAReader");
+//        return defined;
+//    }
 
     public int getMaxSelectable() {
         return mBuilder.mMaxCount;

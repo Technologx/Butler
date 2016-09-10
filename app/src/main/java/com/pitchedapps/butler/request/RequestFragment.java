@@ -139,17 +139,17 @@ public class RequestFragment extends CapsuleFragment {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onAppsLoaded(AppLoadedEvent event) {
-        EventBus.getDefault().removeStickyEvent(event.getClass());
+//        EventBus.getDefault().removeStickyEvent(event.getClass());
         mViewGroup.removeView(mLoadingView);
         snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System.currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
         RequestsAdapter mAdapter = new RequestsAdapter();
         mRV.setAdapter(mAdapter);
-        IconRequest.get().loadHighResIcons();
+//        IconRequest.get().loadHighResIcons();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onAppsLoading(AppLoadingEvent event) {
-        EventBus.getDefault().removeStickyEvent(event.getClass());
+//        EventBus.getDefault().removeStickyEvent(event.getClass());
         mText.setText(event.getString());
     }
 
