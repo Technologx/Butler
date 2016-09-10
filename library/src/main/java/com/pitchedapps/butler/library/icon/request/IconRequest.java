@@ -73,7 +73,7 @@ public final class IconRequest {
 
         protected transient Context mContext;
         protected File mSaveDir = null;
-        protected int mFilterId= R.xml.appfilter;
+        protected int mFilterId = -1;
         protected String mEmail = null;
         protected String mSubject = "Icon Request";
         protected String mHeader = "These apps aren't themed. Thanks in advance";
