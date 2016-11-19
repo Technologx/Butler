@@ -3,10 +3,6 @@ package com.pitchedapps.butler.library.icon.request;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
-import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -30,15 +26,11 @@ import android.text.Html;
 import com.pitchedapps.butler.library.BuildConfig;
 import com.pitchedapps.butler.library.R;
 
-import org.greenrobot.eventbus.EventBus;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
