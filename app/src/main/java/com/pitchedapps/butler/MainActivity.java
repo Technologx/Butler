@@ -11,10 +11,15 @@ public class MainActivity extends CapsuleActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         capsulate().toolbar(R.id.toolbar);
-
         switchFragment(new RequestFragment());
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (isFinishing())
+            IconRequest.cleanup();
     }
 
     @Override
@@ -32,10 +37,4 @@ public class MainActivity extends CapsuleActivity {
         return R.layout.activity_main;
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (isFinishing())
-            IconRequest.cleanup();
-    }
 }
