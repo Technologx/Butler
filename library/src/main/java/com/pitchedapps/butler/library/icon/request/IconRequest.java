@@ -47,7 +47,6 @@ public final class IconRequest {
     private Builder mBuilder;
     private ArrayList<App> mApps;
     private ArrayList<App> mSelectedApps;
-    private transient Handler mHandler;
 
     private static IconRequest mRequest;
 
@@ -490,8 +489,6 @@ public final class IconRequest {
 
     public void loadApps() {
         mBuilder.mIsLoading = true;
-        if (mHandler == null)
-            mHandler = new Handler();
         EventBusUtils.post(new AppLoadingEvent(-2), mBuilder.mLoadingState);
         new Thread(new Runnable() {
             @Override
@@ -513,8 +510,6 @@ public final class IconRequest {
             IRLog.d("High res load failed; app list is empty");
             return;
         }
-        if (mHandler == null)
-            mHandler = new Handler();
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -632,16 +627,6 @@ public final class IconRequest {
         return mSelectedApps;
     }
 
-    private void post(Runnable runnable) {
-        if (mBuilder.mContext == null ||
-                (mBuilder.mContext instanceof Activity && ((Activity) mBuilder.mContext).isFinishing())) {
-            return;
-        } else if (mHandler == null) {
-            return;
-        }
-        mHandler.post(runnable);
-    }
-
     @WorkerThread
     private void postError(@NonNull final String msg, @Nullable final Exception baseError) {
         IRLog.e(msg, baseError);
@@ -651,9 +636,6 @@ public final class IconRequest {
     public void send() {
         IRLog.d("Preparing your request to send...");
         EventBusUtils.post(new RequestEvent(true, false, null), mBuilder.mRequestState);
-        if (mHandler == null)
-            mHandler = new Handler();
-
         if (mApps == null) {
             postError("No apps were loaded from this device.", null);
         } else if (IRUtils.isEmpty(mBuilder.mEmail)) {
@@ -913,7 +895,6 @@ public final class IconRequest {
             mRequest.mBuilder.mContext = null;
             mRequest.mBuilder = null;
         }
-        mRequest.mHandler = null;
         if (mRequest.mApps != null) {
             mRequest.mApps.clear();
             mRequest.mApps = null;
