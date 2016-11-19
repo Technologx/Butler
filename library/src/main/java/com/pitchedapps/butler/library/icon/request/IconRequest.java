@@ -708,7 +708,7 @@ public final class IconRequest {
                             "\t<scale factor=\"1.0\"/>");
                 }
                 if (mBuilder.mGenerateAppMapXml) {
-                    amSb = new StringBuilder("<appmap>\n");
+                    amSb = new StringBuilder("<appmap>");
                 }
                 if (mBuilder.mGenerateThemeResourcesXml) {
                     trSb = new StringBuilder("<Theme version=\"1\">\n" +
