@@ -69,6 +69,7 @@ public final class IconRequest {
         protected transient Context mContext;
         protected File mSaveDir = null;
         protected int mFilterId = -1;
+        protected String mAppName = "Default App";
         protected String mEmail = null;
         protected String mSubject = "Icon Request";
         protected String mHeader = "These apps aren't themed. Thanks in advance";
@@ -80,6 +81,8 @@ public final class IconRequest {
         protected boolean mIncludeDeviceInfo = true;
         protected boolean mComments = true;
         protected boolean mGenerateAppFilterXml = true;
+        protected boolean mGenerateAppMapXml = true;
+        protected boolean mGenerateThemeResourcesXml = true;
         protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
         protected boolean mDebugMode = false;
@@ -114,6 +117,13 @@ public final class IconRequest {
 
         public Builder toEmail(@NonNull String email) {
             mEmail = email;
+            return this;
+        }
+
+        public Builder withAppName(@Nullable String appName, @Nullable Object... args) {
+            if (args != null && appName != null)
+                appName = String.format(appName, args);
+            mAppName = appName;
             return this;
         }
 
@@ -161,6 +171,16 @@ public final class IconRequest {
 
         public Builder generateAppFilterXml(boolean generate) {
             mGenerateAppFilterXml = generate;
+            return this;
+        }
+
+        public Builder generateAppMapXml(boolean generate) {
+            mGenerateAppMapXml = generate;
+            return this;
+        }
+
+        public Builder generateThemeResourcesXml(boolean generate) {
+            mGenerateThemeResourcesXml = generate;
             return this;
         }
 
@@ -223,6 +243,8 @@ public final class IconRequest {
             dest.writeByte(this.mIncludeDeviceInfo ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mComments ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mGenerateAppMapXml ? (byte) 1 : (byte) 0);
+            dest.writeByte(this.mGenerateThemeResourcesXml ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mGenerateAppFilterJson ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mErrorOnInvalidAppFilterDrawable ? (byte) 1 : (byte) 0);
             dest.writeByte(this.mDebugMode ? (byte) 1 : (byte) 0);
@@ -246,6 +268,8 @@ public final class IconRequest {
             this.mIncludeDeviceInfo = in.readByte() != 0;
             this.mComments = in.readByte() != 0;
             this.mGenerateAppFilterXml = in.readByte() != 0;
+            this.mGenerateAppMapXml = in.readByte() != 0;
+            this.mGenerateThemeResourcesXml = in.readByte() != 0;
             this.mGenerateAppFilterJson = in.readByte() != 0;
             this.mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
             this.mDebugMode = in.readByte() != 0;
@@ -670,16 +694,31 @@ public final class IconRequest {
                     }
                 }
 
-                // Create appfilter
-                IRLog.d("Creating appfilter...");
+                // Create request files
+                IRLog.d("Creating request files...");
                 StringBuilder xmlSb = null;
+                StringBuilder amSb = null;
+                StringBuilder trSb = null;
                 StringBuilder jsonSb = null;
                 if (mBuilder.mGenerateAppFilterXml) {
                     xmlSb = new StringBuilder("<resources>\n" +
-                            "\t<iconback img1=\"iconback\" />\n" +
-                            "\t<iconmask img1=\"iconmask\" />\n" +
-                            "\t<iconupon img1=\"iconupon\" />\n" +
-                            "\t<scale factor=\"1.0\" />");
+                            "\t<iconback img1=\"iconback\"/>\n" +
+                            "\t<iconmask img1=\"iconmask\"/>\n" +
+                            "\t<iconupon img1=\"iconupon\"/>\n" +
+                            "\t<scale factor=\"1.0\"/>");
+                }
+                if (mBuilder.mGenerateAppMapXml) {
+                    amSb = new StringBuilder("<appmap>");
+                }
+                if (mBuilder.mGenerateThemeResourcesXml) {
+                    trSb = new StringBuilder("<Theme version=\"1\">\n" +
+                            "\t<Label value=\"" + mBuilder.mAppName + "\"/>\n" +
+                            "\t<Wallpaper image=\"wallpaper_01\"/>\n" +
+                            "\t<LockScreenWallpaper image=\"wallpaper_02\"/>\n" +
+                            "\t<ThemePreview image=\"preview1\"/>\n" +
+                            "\t<ThemePreviewWork image=\"preview1\"/>\n" +
+                            "\t<ThemePreviewMenu image=\"preview1\"/>\n" +
+                            "\t<DockMenuAppIcon selector=\"drawer\"/>");
                 }
                 if (mBuilder.mGenerateAppFilterJson) {
                     jsonSb = new StringBuilder("{\n" +
@@ -698,7 +737,31 @@ public final class IconRequest {
                         }
                         xmlSb.append(String.format("\t<item\n" +
                                         "\t\tcomponent=\"ComponentInfo{%s}\"\n" +
-                                        "\t\tdrawable=\"%s\" />",
+                                        "\t\tdrawable=\"%s\"/>",
+                                app.getCode(), drawableName));
+                    }
+                    if (amSb != null) {
+                        amSb.append("\n\n");
+                        if (mBuilder.mComments) {
+                            amSb.append("\t<!-- ")
+                                    .append(name)
+                                    .append(" -->\n");
+                        }
+                        amSb.append(String.format("\t<item\n" +
+                                        "\t\tclass=\"%s\"\n" +
+                                        "\t\tname=\"%s\"/>",
+                                app.getCode().split("/")[1], drawableName));
+                    }
+                    if (trSb != null) {
+                        trSb.append("\n\n");
+                        if (mBuilder.mComments) {
+                            trSb.append("\t<!-- ")
+                                    .append(name)
+                                    .append(" -->\n");
+                        }
+                        trSb.append(String.format("\t<AppIcon\n" +
+                                        "\t\tname=\"%s\"\n" +
+                                        "\t\timage=\"%s\"/>",
                                 app.getCode(), drawableName));
                     }
                     if (jsonSb != null) {
@@ -727,6 +790,32 @@ public final class IconRequest {
                         return;
                     }
                 }
+
+                if (amSb != null) {
+                    amSb.append("\n\n</appmap>");
+                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format("appmap_%s.xml", date));
+                    filesToZip.add(newAppFilter);
+                    try {
+                        FileUtil.writeAll(newAppFilter, amSb.toString());
+                    } catch (final Exception e) {
+                        e.printStackTrace();
+                        postError("Failed to write your request appmap.xml file: " + e.getMessage(), e);
+                        return;
+                    }
+                }
+                if (trSb != null) {
+                    trSb.append("\n\n</Theme>");
+                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format("theme_resources_%s.xml", date));
+                    filesToZip.add(newAppFilter);
+                    try {
+                        FileUtil.writeAll(newAppFilter, trSb.toString());
+                    } catch (final Exception e) {
+                        e.printStackTrace();
+                        postError("Failed to write your request theme_resources.xml file: " + e.getMessage(), e);
+                        return;
+                    }
+                }
+
                 if (jsonSb != null) {
                     jsonSb.append("\n    ]\n}");
                     final File newAppFilter = new File(mBuilder.mSaveDir, String.format("appfilter_%s.json", date));

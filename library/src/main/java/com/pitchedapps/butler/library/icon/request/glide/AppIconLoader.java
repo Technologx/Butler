@@ -38,7 +38,7 @@ public class AppIconLoader implements ModelLoader<App, App> {
         };
     }
 
-    public static void display(ImageView imageView, App app) {
+    public static void display(ImageView imageView, App app, Priority priority, Drawable thumbnail) {
         Glide.with(imageView.getContext())
                 .using(new AppIconLoader(), App.class)
                 .from(App.class)
@@ -46,6 +46,8 @@ public class AppIconLoader implements ModelLoader<App, App> {
                 .decoder(new ApplicationIconDecoder(imageView.getContext(), app.getPackage()))
                 .diskCacheStrategy(DiskCacheStrategy.NONE) // cannot disk cache ApplicationInfo, nor Drawables
                 .load(app)
+                .placeholder(thumbnail)
+                .priority(priority)
                 .into(imageView);
     }
 

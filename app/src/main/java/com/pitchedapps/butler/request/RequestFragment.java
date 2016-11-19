@@ -36,72 +36,6 @@ import java.util.Locale;
 public class RequestFragment extends CapsuleFragment {
 
     @Override
-    public void onFabClick(View v) {
-        getPermissions(new CPermissionCallback() {
-            @Override
-            public void onResult(PermissionResult result) {
-                if (result.isAllGranted()) {
-                    IconRequest.get().send();
-                }
-            }
-        }, 9, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-    }
-
-    @Override
-    public int getTitleId() {
-        return R.string.request_title;
-    }
-
-    @Override
-    protected int getFabIcon() {
-        return R.drawable.ic_email;
-    }
-
-    @Override
-    protected boolean hasFab() {
-        return true;
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        EventBus.getDefault().register(this);
-    }
-
-    @Override
-    public void onStop() {
-        EventBus.getDefault().unregister(this);
-        super.onStop();
-    }
-
-    private RecyclerView mRV;
-    private RelativeLayout mLoadingView;
-    private long start;
-    private ViewGroup mViewGroup;
-    private TextView mText;
-
-    private void setupRequest() {
-        if (IconRequest.get() == null) {
-            IconRequest.start(getActivity())
-                    .withHeader("Hey, testing Icon Request!")
-                    .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
-                    .withSubject("Icon Request - Just a Test")
-                    .toEmail("fake-email@fake-website.com")
-                    .saveDir(new File(Environment.getExternalStorageDirectory(), "Pitched_Apps/Capsule"))
-                    .includeDeviceInfo(true)
-                    .generateAppFilterXml(true)
-                    .generateAppFilterJson(false)
-                    .requestEvents(EventState.DISABLED)
-                    .loadedEvents(EventState.ENABLED)
-                    .loadingEvents(EventState.DISABLED)
-                    .selectionEvents(EventState.DISABLED)
-                    .filterOff()
-                    .debugMode(true)
-                    .build().loadApps();
-        }
-    }
-
-    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EventBus.builder()
@@ -136,6 +70,71 @@ public class RequestFragment extends CapsuleFragment {
         return v;
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
+
+    @Override
+    public void onFabClick(View v) {
+        getPermissions(new CPermissionCallback() {
+            @Override
+            public void onResult(PermissionResult result) {
+                if (result.isAllGranted()) {
+                    IconRequest.get().send();
+                }
+            }
+        }, 9, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+    }
+
+    @Override
+    public int getTitleId() {
+        return R.string.request_title;
+    }
+
+    @Override
+    protected int getFabIcon() {
+        return R.drawable.ic_email;
+    }
+
+    @Override
+    protected boolean hasFab() {
+        return true;
+    }
+
+    private RecyclerView mRV;
+    private RelativeLayout mLoadingView;
+    private long start;
+    private ViewGroup mViewGroup;
+    private TextView mText;
+
+    private void setupRequest() {
+        if (IconRequest.get() == null) {
+            IconRequest.start(getActivity())
+                    .withHeader("Hey, testing Icon Request!")
+                    .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
+                    .withSubject("Icon Request - Just a Test")
+                    .toEmail("fake-email@fake-website.com")
+                    .saveDir(new File(Environment.getExternalStorageDirectory(), "Pitched_Apps/Capsule"))
+                    .includeDeviceInfo(true)
+                    .generateAppFilterXml(true)
+                    .generateAppFilterJson(false)
+                    .requestEvents(EventState.DISABLED)
+                    .loadedEvents(EventState.ENABLED)
+                    .loadingEvents(EventState.DISABLED)
+                    .selectionEvents(EventState.DISABLED)
+                    .filterOff()
+                    .debugMode(true)
+                    .build().loadApps();
+        }
+    }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onAppsLoaded(AppLoadedEvent event) {

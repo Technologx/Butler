@@ -15,6 +15,7 @@ import android.support.v4.content.res.ResourcesCompat;
 import android.util.DisplayMetrics;
 import android.widget.ImageView;
 
+import com.bumptech.glide.Priority;
 import com.pitchedapps.butler.library.icon.request.glide.AppIconLoader;
 
 /**
@@ -35,6 +36,17 @@ public class App implements Parcelable {
         mPkg = pkg;
     }
 
+    public Drawable getHighResIcon(Context context) {
+        if (mIconHighRes == null) {
+            final ApplicationInfo ai = getAppInfo(context);
+            if (ai == null || ai.icon == 0) return getIcon(context);
+            final Resources mRes = getResources(context, ai);
+            if (mRes == null) return getIcon(context);
+            mIconHighRes = getAppIcon(mRes, ai.icon);
+        }
+        return mIconHighRes;
+    }
+
     public Drawable getIcon(Context context) {
         if (mIcon == null) {
             final ApplicationInfo ai = getAppInfo(context);
@@ -44,26 +56,30 @@ public class App implements Parcelable {
         return mIcon;
     }
 
-    public Drawable getHighResIcon(Context context) {
-        if (mIconHighRes == null) {
-            final ApplicationInfo ai = getAppInfo(context);
-            if (ai == null || ai.icon == 0) return getIcon(context);
-            final Resources mRes = getResources(context, ai);
-            if (mRes == null) return getIcon(context);
+    public Drawable getAppIcon(Resources resources, int iconId) {
+        Drawable d;
+        try {
             int iconDpi;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 iconDpi = DisplayMetrics.DENSITY_XXXHIGH;
             } else {
                 iconDpi = DisplayMetrics.DENSITY_XXHIGH;
             }
-            mIconHighRes = ResourcesCompat.getDrawableForDensity(mRes, ai.icon, iconDpi, null);
+            d = ResourcesCompat.getDrawableForDensity(resources, iconId, iconDpi, null);
+        } catch (Resources.NotFoundException e) {
+            d = null;
         }
-        return mIconHighRes;
+        return (d != null) ? d : getAppDefaultIcon();
     }
 
-    public void loadIcon(ImageView into) {
+
+    public Drawable getAppDefaultIcon() {
+        return getAppIcon(Resources.getSystem(), android.R.mipmap.sym_def_app_icon);
+    }
+
+    public void loadIcon(ImageView into, Priority priority) {
         if (IRUtils.inClassPath("com.bumptech.glide.load.model.ModelLoader")) {
-            AppIconLoader.display(into, this);
+            AppIconLoader.display(into, this, priority, getAppDefaultIcon());
         } else {
             into.setImageDrawable(getIcon(into.getContext()));
         }
