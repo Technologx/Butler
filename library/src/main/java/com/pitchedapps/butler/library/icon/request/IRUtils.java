@@ -77,10 +77,18 @@ public class IRUtils {
 
     public static void startTimer(@NonNull String key) {
         if (mTimers == null) mTimers = new HashMap<>();
+        if(key.isEmpty()){
+            IRLog.e("Invalid key. It's empty");
+            return;
+        }
         mTimers.put(key, System.currentTimeMillis());
     }
 
     public static void stopTimer(@NonNull String key) {
+        if(key.isEmpty()){
+            IRLog.e("Invalid key. It's empty");
+            return;
+        }
         if (mTimers == null || !mTimers.containsKey(key)) {
             IRLog.e("Invalid timer", key);
             return;
