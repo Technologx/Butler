@@ -910,7 +910,7 @@ public final class IconRequest {
         mRequest = null;
     }
 
-    interface RequestReadyCallback {
+    public interface RequestReadyCallback {
         void onRequestReady();
     }
 
