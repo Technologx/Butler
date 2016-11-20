@@ -88,7 +88,8 @@ public class RequestFragment extends CapsuleFragment {
             @Override
             public void onResult(PermissionResult result) {
                 if (result.isAllGranted()) {
-                    IconRequest.get().send();
+                    // TODO: Add a callback if you want Allan.
+                    IconRequest.get().send(null);
                 }
             }
         }, 9, Manifest.permission.WRITE_EXTERNAL_STORAGE);

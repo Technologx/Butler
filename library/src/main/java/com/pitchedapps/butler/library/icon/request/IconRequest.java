@@ -1,6 +1,5 @@
 package com.pitchedapps.butler.library.icon.request;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.XmlResourceParser;
@@ -11,7 +10,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.CallSuper;
@@ -633,7 +631,7 @@ public final class IconRequest {
         EventBusUtils.post(new RequestEvent(false, false, new Exception(msg, baseError)), mBuilder.mRequestState);
     }
 
-    public void send() {
+    public void send(final RequestReadyCallback callback) {
         IRLog.d("Preparing your request to send...");
         EventBusUtils.post(new RequestEvent(true, false, null), mBuilder.mRequestState);
         if (mApps == null) {
@@ -849,6 +847,11 @@ public final class IconRequest {
                         .putExtra(Intent.EXTRA_TEXT, Html.fromHtml(getBody()))
                         .putExtra(Intent.EXTRA_STREAM, zipUri)
                         .setType("application/zip");
+
+                if (callback != null) {
+                    callback.onRequestReady();
+                }
+
                 mBuilder.mContext.startActivity(Intent.createChooser(
                         emailIntent, mBuilder.mContext.getString(R.string.send_using)));
 
@@ -906,4 +909,9 @@ public final class IconRequest {
         IRUtils.clearTimers();
         mRequest = null;
     }
+
+    interface RequestReadyCallback {
+        void onRequestReady();
+    }
+
 }
