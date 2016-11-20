@@ -77,7 +77,7 @@ public class IRUtils {
 
     public static void startTimer(@NonNull String key) {
         if (mTimers == null) mTimers = new HashMap<>();
-        if(key.isEmpty()){
+        if (key.isEmpty()) {
             IRLog.e("Invalid key. It's empty");
             return;
         }
@@ -85,7 +85,7 @@ public class IRUtils {
     }
 
     public static void stopTimer(@NonNull String key) {
-        if(key.isEmpty()){
+        if (key.isEmpty()) {
             IRLog.e("Invalid key. It's empty");
             return;
         }
