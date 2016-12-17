@@ -665,13 +665,21 @@ public final class IconRequest {
 
                 // Save app icons
                 IRLog.d("Saving icons...");
+                ArrayList<String> appNames = new ArrayList<>();
+                int i = 1;
                 for (App app : mSelectedApps) {
+                    String iconName = app.getLocalizedName(mBuilder.mContext);
+                    if (appNames.contains(iconName)) {
+                        iconName += String.valueOf(i);
+                        i += 1;
+                    }
                     final Drawable drawable = app.getHighResIcon(mBuilder.mContext);
                     if (!(drawable instanceof BitmapDrawable)) continue;
                     final BitmapDrawable bDrawable = (BitmapDrawable) drawable;
                     final Bitmap icon = bDrawable.getBitmap();
                     final File file = new File(mBuilder.mSaveDir,
-                            String.format("%s.png", IRUtils.drawableName(app.getName())));
+                            String.format("%s.png", IRUtils.drawableName(iconName)));
+                    appNames.add(iconName);
                     filesToZip.add(file);
                     try {
                         FileUtil.writeIcon(file, icon);
@@ -713,9 +721,16 @@ public final class IconRequest {
                             "\t\"components\": [");
                 }
                 int index = 0;
+                int n = 1;
+                appNames.clear();
                 for (App app : mSelectedApps) {
                     final String name = app.getLocalizedName(mBuilder.mContext);
-                    final String drawableName = IRUtils.drawableName(name);
+                    String iconName = name;
+                    if (appNames.contains(iconName)) {
+                        iconName += String.valueOf(n);
+                        n += 1;
+                    }
+                    final String drawableName = IRUtils.drawableName(iconName);
                     if (xmlSb != null) {
                         xmlSb.append("\n\n");
                         if (mBuilder.mComments) {
@@ -762,6 +777,7 @@ public final class IconRequest {
                                 .append("\t\t}");
                     }
                     index++;
+                    appNames.add(iconName);
                 }
 
                 String date = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
