@@ -2,21 +2,43 @@ package com.pitchedapps.butler.library.icon.request;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.FeatureInfo;
+import android.content.pm.InstrumentationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
+import android.content.pm.PermissionGroupInfo;
+import android.content.pm.PermissionInfo;
+import android.content.pm.ProviderInfo;
+import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
+import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.content.res.XmlResourceParser;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.os.UserHandle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.res.ResourcesCompat;
+import android.support.v4.util.TimeUtils;
 import android.util.DisplayMetrics;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Priority;
 import com.pitchedapps.butler.library.icon.request.glide.AppIconLoader;
+
+import java.util.List;
+import java.util.Locale;
+
+import timber.log.Timber;
 
 /**
  * Created by Allan Wang on 2016-08-20.
@@ -87,6 +109,17 @@ public class App implements Parcelable {
 
     public String getName() {
         return mName;
+    }
+
+    public String getLocalizedName(Context context) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            ApplicationInfo appInfo = pm.getApplicationInfo(getPackage(), PackageManager.GET_META_DATA);
+            return pm.getApplicationLabel(appInfo).toString();
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        return "Unknown";
     }
 
     public String getCode() {

@@ -2,6 +2,8 @@ package com.pitchedapps.butler.library.icon.request;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -21,7 +23,6 @@ import android.support.annotation.WorkerThread;
 import android.support.annotation.XmlRes;
 import android.text.Html;
 
-import com.pitchedapps.butler.library.BuildConfig;
 import com.pitchedapps.butler.library.R;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -94,7 +95,6 @@ public final class IconRequest {
         public Builder(@NonNull Context context) {
             mContext = context;
             mSaveDir = new File(Environment.getExternalStorageDirectory(), "IconRequest");
-            FileUtil.wipe(mSaveDir);
         }
 
         public Builder filterXmlId(@XmlRes int resId) {
@@ -539,11 +539,17 @@ public final class IconRequest {
         if (mBuilder.mIncludeDeviceInfo) {
             sb.append("<br/><br/><br/>OS Version: ").append(System.getProperty("os.version")).append("(").append(Build.VERSION.INCREMENTAL).append(")");
             sb.append("<br/>OS API Level: ").append(Build.VERSION.SDK_INT);
-            sb.append("<br/>Device: ").append(Build.DEVICE);
+            sb.append("<br/>Device: ").append(Build.MODEL);
             sb.append("<br/>Manufacturer: ").append(Build.MANUFACTURER);
-            sb.append("<br/>Model (and Product): ").append(Build.MODEL).append(" (").append(Build.PRODUCT).append(")");
-            sb.append("<br/>App Version Name: ").append(BuildConfig.VERSION_NAME);
-            sb.append("<br/>App Version Code: ").append(BuildConfig.VERSION_CODE);
+            sb.append("<br/>Model (and Product): ").append(Build.DEVICE).append(" (").append(Build.PRODUCT).append(")");
+            PackageInfo appInfo;
+            try {
+                appInfo = mBuilder.mContext.getPackageManager().getPackageInfo(mBuilder.mContext.getPackageName(), 0);
+                sb.append("<br/>App Version Name: ").append(appInfo.versionName);
+                sb.append("<br/>App Version Code: ").append(appInfo.versionCode);
+            } catch (PackageManager.NameNotFoundException e) {
+                sb.append("<br/>There was an error getting application version.");
+            }
             if (mBuilder.mFooter != null) {
                 sb.append("<br/>");
                 sb.append(mBuilder.mFooter.replace("\n", "<br/>"));
@@ -649,10 +655,12 @@ public final class IconRequest {
         }
 
         new Thread(new Runnable() {
-            @SuppressWarnings("ResultOfMethodCallIgnored")
+            @SuppressWarnings({"ResultOfMethodCallIgnored", "deprecation"})
             @Override
             public void run() {
                 final ArrayList<File> filesToZip = new ArrayList<>();
+
+                FileUtil.wipe(mBuilder.mSaveDir);
                 mBuilder.mSaveDir.mkdirs();
 
                 // Save app icons
@@ -706,7 +714,7 @@ public final class IconRequest {
                 }
                 int index = 0;
                 for (App app : mSelectedApps) {
-                    final String name = app.getName();
+                    final String name = app.getLocalizedName(mBuilder.mContext);
                     final String drawableName = IRUtils.drawableName(name);
                     if (xmlSb != null) {
                         xmlSb.append("\n\n");
@@ -856,8 +864,6 @@ public final class IconRequest {
                         emailIntent, mBuilder.mContext.getString(R.string.send_using)));
 
                 EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
-//                    }
-//                }); //TODO verify
             }
         }).start();
     }

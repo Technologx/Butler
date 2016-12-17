@@ -13,17 +13,18 @@ import java.io.OutputStream;
 class FileUtil {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public static int wipe(File dir) {
-        if (!dir.exists()) return 0;
-        int count = 1;
-        if (dir.isDirectory()) {
-            File[] contents = dir.listFiles();
-            if (contents != null && contents.length > 0) {
-                for (File fi : contents)
-                    count += wipe(fi);
+    public static int wipe(File file) {
+        if (!file.exists()) return 0;
+        int count = 0;
+        if (file.isDirectory()) {
+            File[] folderContent = file.listFiles();
+            if (folderContent != null && folderContent.length > 0) {
+                for (File fileInFolder : folderContent) {
+                    count += wipe(fileInFolder);
+                }
             }
         }
-        dir.delete();
+        file.delete();
         return count;
     }
 
