@@ -18,21 +18,9 @@ class ZipUtil {
         InputStream is = null;
         try {
             out = new ZipOutputStream(new FileOutputStream(zipFile));
-            int i = 0;
             for (File fi : files) {
                 out.putNextEntry(new ZipEntry(fi.getName()));
-                /*
-                try {
-                    out.putNextEntry(new ZipEntry(fi.getName()));
-                } catch (ZipException e) {
-                    i += 1;
-                    String fiName = fi.getName();
-                    out.putNextEntry(new ZipEntry(fiName.substring(0, fiName.lastIndexOf('.')) + String.valueOf(i) +
-                            fiName.substring(fiName.lastIndexOf('.', fiName.length()))));
-                }
-                */
                 is = new FileInputStream(fi);
-
                 int read;
                 byte[] buffer = new byte[2048];
                 while ((read = is.read(buffer)) != -1)

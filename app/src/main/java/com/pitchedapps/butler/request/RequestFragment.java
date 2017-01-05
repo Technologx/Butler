@@ -47,7 +47,8 @@ public class RequestFragment extends CapsuleFragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle
+            savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
 
         View v = inflater.inflate(R.layout.icon_request_section, container, false);
@@ -59,7 +60,8 @@ public class RequestFragment extends CapsuleFragment {
         mRV.setLayoutManager(llm);
         mRV.setHasFixedSize(true);
         mLoadingView = (RelativeLayout) v.findViewById(R.id.loading_view);
-        RecyclerFastScroller mFastScroller = (RecyclerFastScroller) v.findViewById(R.id.rvFastScroller);
+        RecyclerFastScroller mFastScroller = (RecyclerFastScroller) v.findViewById(R.id
+                .rvFastScroller);
         mFastScroller.attachRecyclerView(mRV);
 
         if (savedInstanceState != null)
@@ -120,10 +122,13 @@ public class RequestFragment extends CapsuleFragment {
         if (IconRequest.get() == null) {
             IconRequest.start(getActivity())
                     .withHeader("Hey, testing Icon Request!")
-                    .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig.VERSION_NAME)
+                    .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig
+                            .VERSION_NAME)
                     .withSubject("Icon Request - Just a Test")
+                    .withServerUpload("devs", "iconshowcasedevs", "butler")
                     .toEmail("fake-email@fake-website.com")
-                    .saveDir(new File(Environment.getExternalStorageDirectory(), "Pitched_Apps/Capsule"))
+                    .saveDir(new File(Environment.getExternalStorageDirectory(),
+                            "Pitched_Apps/Capsule"))
                     .includeDeviceInfo(true)
                     .generateAppFilterXml(true)
                     .generateAppFilterJson(false)
@@ -141,7 +146,8 @@ public class RequestFragment extends CapsuleFragment {
     public void onAppsLoaded(AppLoadedEvent event) {
 //        EventBus.getDefault().removeStickyEvent(event.getClass());
         mViewGroup.removeView(mLoadingView);
-        snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System.currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
+        snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System
+                .currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
         RequestsAdapter mAdapter = new RequestsAdapter();
         mRV.setAdapter(mAdapter);
 //        IconRequest.get().loadHighResIcons();
