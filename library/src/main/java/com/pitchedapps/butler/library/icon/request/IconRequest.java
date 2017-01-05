@@ -948,6 +948,10 @@ public final class IconRequest {
                     }
                 }
 
+                if (callback != null) {
+                    callback.onRequestReady(mBuilder.mServerSetup, filesUploaded[0]);
+                }
+
                 if (!mBuilder.mServerSetup) {
                     // post(new Runnable() {
                     // @Override
@@ -963,10 +967,6 @@ public final class IconRequest {
                             .setType("application/zip");
                     mBuilder.mContext.startActivity(Intent.createChooser(
                             emailIntent, mBuilder.mContext.getString(R.string.send_using)));
-                }
-
-                if (callback != null) {
-                    callback.onRequestReady(mBuilder.mServerSetup, filesUploaded[0]);
                 }
 
                 EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
