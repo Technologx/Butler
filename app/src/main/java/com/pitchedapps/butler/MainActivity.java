@@ -2,7 +2,7 @@ package com.pitchedapps.butler;
 
 import android.os.Bundle;
 
-import com.pitchedapps.butler.library.icon.request.IconRequest;
+import com.pitchedapps.butler.iconrequest.IconRequest;
 import com.pitchedapps.butler.request.RequestFragment;
 import com.pitchedapps.capsule.library.activities.CapsuleActivity;
 

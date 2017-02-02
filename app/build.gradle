@@ -37,7 +37,8 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile "com.android.support:appcompat-v7:$ANDROID_SUPPORT_LIBS"
+    compile "com.android.support:support-v4:$ANDROID_SUPPORT_LIBS"
+    compile "com.android.support:design:$ANDROID_SUPPORT_LIBS"
     compile 'com.github.AllanWang:Capsule:de63ab2f18@aar'
     compile 'com.github.pluscubed:recycler-fast-scroll:0.3.2@aar'
     compile project(":library");

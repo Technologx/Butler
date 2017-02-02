@@ -11,8 +11,8 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Priority;
 import com.pitchedapps.butler.R;
-import com.pitchedapps.butler.library.icon.request.App;
-import com.pitchedapps.butler.library.icon.request.IconRequest;
+import com.pitchedapps.butler.iconrequest.App;
+import com.pitchedapps.butler.iconrequest.IconRequest;
 
 import java.util.ArrayList;
 

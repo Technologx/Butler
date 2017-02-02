@@ -14,10 +14,10 @@ import android.widget.TextView;
 
 import com.pitchedapps.butler.BuildConfig;
 import com.pitchedapps.butler.R;
-import com.pitchedapps.butler.library.icon.request.AppLoadedEvent;
-import com.pitchedapps.butler.library.icon.request.AppLoadingEvent;
-import com.pitchedapps.butler.library.icon.request.EventState;
-import com.pitchedapps.butler.library.icon.request.IconRequest;
+import com.pitchedapps.butler.iconrequest.events.AppLoadedEvent;
+import com.pitchedapps.butler.iconrequest.events.AppLoadingEvent;
+import com.pitchedapps.butler.iconrequest.events.EventState;
+import com.pitchedapps.butler.iconrequest.IconRequest;
 import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
 import com.pitchedapps.capsule.library.permissions.CPermissionCallback;
 import com.pitchedapps.capsule.library.permissions.PermissionResult;
