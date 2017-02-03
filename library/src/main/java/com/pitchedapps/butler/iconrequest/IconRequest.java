@@ -37,7 +37,6 @@ import com.pitchedapps.butler.iconrequest.utils.ComponentInfoUtil;
 import com.pitchedapps.butler.iconrequest.utils.EventBusUtils;
 import com.pitchedapps.butler.iconrequest.utils.FileUtil;
 import com.pitchedapps.butler.iconrequest.utils.IRUtils;
-import com.pitchedapps.butler.iconrequest.utils.TimeUtils;
 import com.pitchedapps.butler.iconrequest.utils.ZipUtil;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -964,7 +963,7 @@ public final class IconRequest {
         IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " + mBuilder
                 .mTimeLimit);
         if (getMillisToFinish() <= 0) {
-            mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, TimeUtils
+            mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, IRUtils
                     .getCurrentTimeInMillis()).apply();
             return true;
         }
@@ -975,10 +974,10 @@ public final class IconRequest {
     private long getMillisToFinish() {
         long savedTime = mBuilder.mPrefs.getLong(KEY_SAVED_TIME_MILLIS, -1);
         if (savedTime == -1) return -1;
-        long elapsedTime = TimeUtils.getCurrentTimeInMillis() - savedTime;
+        long elapsedTime = IRUtils.getCurrentTimeInMillis() - savedTime;
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd,yyyy HH:mm:ss");
         IRLog.d("Timer: [Last request was on: " + sdf.format(savedTime) + "] - [Right" +
-                " now is: " + sdf.format(new Date(TimeUtils.getCurrentTimeInMillis())) + "] - " +
+                " now is: " + sdf.format(new Date(IRUtils.getCurrentTimeInMillis())) + "] - " +
                 "[Elapsed Time: " + ((mBuilder.mTimeLimit - elapsedTime) / 1000) + " secs.]");
         return mBuilder.mTimeLimit - elapsedTime;
     }

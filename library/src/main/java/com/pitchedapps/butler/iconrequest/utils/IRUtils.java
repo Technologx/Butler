@@ -5,14 +5,13 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.pitchedapps.butler.iconrequest.logs.IRLog;
 
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
 
@@ -106,6 +105,15 @@ public class IRUtils {
     }
 
     private IRUtils() {
+    }
+
+    /**
+     * This method returns current time in milliseconds
+     *
+     * @return time in milliseconds
+     */
+    public static long getCurrentTimeInMillis() {
+        return Calendar.getInstance().getTimeInMillis();
     }
 
     private static HashMap<String, Long> mTimers;
