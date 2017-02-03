@@ -1,7 +1,9 @@
 package com.pitchedapps.butler.iconrequest;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.XmlResourceParser;
@@ -23,6 +25,7 @@ import android.support.annotation.WorkerThread;
 import android.support.annotation.XmlRes;
 import android.text.Html;
 
+import com.pitchedapps.butler.R;
 import com.pitchedapps.butler.iconrequest.events.AppLoadedEvent;
 import com.pitchedapps.butler.iconrequest.events.AppLoadingEvent;
 import com.pitchedapps.butler.iconrequest.events.AppSelectionEvent;
@@ -34,25 +37,20 @@ import com.pitchedapps.butler.iconrequest.utils.ComponentInfoUtil;
 import com.pitchedapps.butler.iconrequest.utils.EventBusUtils;
 import com.pitchedapps.butler.iconrequest.utils.FileUtil;
 import com.pitchedapps.butler.iconrequest.utils.IRUtils;
+import com.pitchedapps.butler.iconrequest.utils.TimeUtils;
 import com.pitchedapps.butler.iconrequest.utils.ZipUtil;
-import com.pitchedapps.butler.library.R;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import timber.log.Timber;
 
@@ -64,6 +62,8 @@ public final class IconRequest {
     private Builder mBuilder;
     private ArrayList<App> mApps;
     private ArrayList<App> mSelectedApps;
+
+    public static final String KEY_SAVED_TIME_MILLIS = "saved_time_millis";
 
     private static IconRequest mRequest;
 
@@ -90,11 +90,8 @@ public final class IconRequest {
         protected String mSubject = "Icon Request";
         protected String mHeader = "These apps aren't themed. Thanks in advance";
         protected String mFooter = null;
-        protected String mServerUserName = null;
-        protected String mServerPassword = null;
-        protected String mServerFolder = null;
         protected int mMaxCount = 0;
-        protected boolean mServerSetup = false;
+        protected long mTimeLimit = -1;
         protected boolean mIsLoading = false;
         protected boolean mHasMaxCount = false;
         protected boolean mNoneSelectsAll = true;
@@ -106,6 +103,7 @@ public final class IconRequest {
         protected boolean mGenerateAppFilterJson = false;
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
         protected boolean mDebugMode = false;
+        protected SharedPreferences mPrefs = null;
         protected EventState mLoadingState = EventState.DISABLED,
                 mLoadedState = EventState.STICKIED,
                 mSelectionState = EventState.DISABLED,
@@ -167,22 +165,16 @@ public final class IconRequest {
             return this;
         }
 
-        public Builder withServerUpload(@Nullable String username,
-                                        @Nullable String password, @Nullable String folder) {
-            if ((username != null && username.length()
-                    > 0) && (password != null && password.length() > 0)
-                    && (folder != null && folder.length() > 0)) {
-                mServerUserName = username;
-                mServerPassword = password;
-                mServerFolder = folder;
-                mServerSetup = true;
-            }
-            return this;
-        }
-
         public Builder maxSelectionCount(@IntRange(from = 0) int count) {
             mMaxCount = count;
             mHasMaxCount = mMaxCount != 0;
+            return this;
+        }
+
+        public Builder withTimeLimit(int minutes, SharedPreferences prefs) {
+            mTimeLimit = TimeUnit.MINUTES.toMillis(minutes);
+            mPrefs = prefs != null ? prefs : mContext.getSharedPreferences("ButlerPrefs", Context
+                    .MODE_PRIVATE);
             return this;
         }
 
@@ -262,66 +254,68 @@ public final class IconRequest {
 
         @Override
         public void writeToParcel(Parcel dest, int flags) {
-            dest.writeSerializable(this.mSaveDir);
-            dest.writeInt(this.mFilterId);
-            dest.writeString(this.mEmail);
-            dest.writeString(this.mSubject);
-            dest.writeString(this.mHeader);
-            dest.writeString(this.mFooter);
-            dest.writeInt(this.mMaxCount);
-            dest.writeByte(this.mIsLoading ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mHasMaxCount ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mNoneSelectsAll ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mIncludeDeviceInfo ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mComments ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mGenerateAppFilterXml ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mGenerateAppMapXml ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mGenerateThemeResourcesXml ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mGenerateAppFilterJson ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mErrorOnInvalidAppFilterDrawable ? (byte) 1 : (byte) 0);
-            dest.writeByte(this.mDebugMode ? (byte) 1 : (byte) 0);
-            dest.writeInt(this.mLoadingState == null ? -1 : this.mLoadingState.ordinal());
-            dest.writeInt(this.mLoadedState == null ? -1 : this.mLoadedState.ordinal());
-            dest.writeInt(this.mSelectionState == null ? -1 : this.mSelectionState.ordinal());
-            dest.writeInt(this.mRequestState == null ? -1 : this.mRequestState.ordinal());
+            dest.writeSerializable(mSaveDir);
+            dest.writeInt(mFilterId);
+            dest.writeString(mAppName);
+            dest.writeString(mEmail);
+            dest.writeString(mSubject);
+            dest.writeString(mHeader);
+            dest.writeString(mFooter);
+            dest.writeInt(mMaxCount);
+            dest.writeLong(mTimeLimit);
+            dest.writeByte((byte) (mIsLoading ? 1 : 0));
+            dest.writeByte((byte) (mHasMaxCount ? 1 : 0));
+            dest.writeByte((byte) (mNoneSelectsAll ? 1 : 0));
+            dest.writeByte((byte) (mIncludeDeviceInfo ? 1 : 0));
+            dest.writeByte((byte) (mComments ? 1 : 0));
+            dest.writeByte((byte) (mGenerateAppFilterXml ? 1 : 0));
+            dest.writeByte((byte) (mGenerateAppMapXml ? 1 : 0));
+            dest.writeByte((byte) (mGenerateThemeResourcesXml ? 1 : 0));
+            dest.writeByte((byte) (mGenerateAppFilterJson ? 1 : 0));
+            dest.writeByte((byte) (mErrorOnInvalidAppFilterDrawable ? 1 : 0));
+            dest.writeByte((byte) (mDebugMode ? 1 : 0));
+            dest.writeInt(mLoadingState == null ? -1 : mLoadingState.ordinal());
+            dest.writeInt(mLoadedState == null ? -1 : mLoadedState.ordinal());
+            dest.writeInt(mSelectionState == null ? -1 : mSelectionState.ordinal());
+            dest.writeInt(mRequestState == null ? -1 : mRequestState.ordinal());
         }
 
         protected Builder(Parcel in) {
-            this.mSaveDir = (File) in.readSerializable();
-            this.mFilterId = in.readInt();
-            this.mEmail = in.readString();
-            this.mSubject = in.readString();
-            this.mHeader = in.readString();
-            this.mFooter = in.readString();
-            this.mMaxCount = in.readInt();
-            this.mIsLoading = in.readByte() != 0;
-            this.mHasMaxCount = in.readByte() != 0;
-            this.mNoneSelectsAll = in.readByte() != 0;
-            this.mIncludeDeviceInfo = in.readByte() != 0;
-            this.mComments = in.readByte() != 0;
-            this.mGenerateAppFilterXml = in.readByte() != 0;
-            this.mGenerateAppMapXml = in.readByte() != 0;
-            this.mGenerateThemeResourcesXml = in.readByte() != 0;
-            this.mGenerateAppFilterJson = in.readByte() != 0;
-            this.mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
-            this.mDebugMode = in.readByte() != 0;
+            mSaveDir = (File) in.readSerializable();
+            mFilterId = in.readInt();
+            mAppName = in.readString();
+            mEmail = in.readString();
+            mSubject = in.readString();
+            mHeader = in.readString();
+            mFooter = in.readString();
+            mMaxCount = in.readInt();
+            mTimeLimit = in.readLong();
+            mIsLoading = in.readByte() != 0;
+            mHasMaxCount = in.readByte() != 0;
+            mNoneSelectsAll = in.readByte() != 0;
+            mIncludeDeviceInfo = in.readByte() != 0;
+            mComments = in.readByte() != 0;
+            mGenerateAppFilterXml = in.readByte() != 0;
+            mGenerateAppMapXml = in.readByte() != 0;
+            mGenerateThemeResourcesXml = in.readByte() != 0;
+            mGenerateAppFilterJson = in.readByte() != 0;
+            mErrorOnInvalidAppFilterDrawable = in.readByte() != 0;
+            mDebugMode = in.readByte() != 0;
             int tmpMLoadingState = in.readInt();
-            this.mLoadingState = tmpMLoadingState == -1 ? null : EventState.values()
-                    [tmpMLoadingState];
+            mLoadingState = tmpMLoadingState == -1 ? null : EventState.values()[tmpMLoadingState];
             int tmpMLoadedState = in.readInt();
-            this.mLoadedState = tmpMLoadedState == -1 ? null : EventState.values()[tmpMLoadedState];
+            mLoadedState = tmpMLoadedState == -1 ? null : EventState.values()[tmpMLoadedState];
             int tmpMSelectionState = in.readInt();
-            this.mSelectionState = tmpMSelectionState == -1 ? null : EventState.values()
+            mSelectionState = tmpMSelectionState == -1 ? null : EventState.values()
                     [tmpMSelectionState];
             int tmpMRequestState = in.readInt();
-            this.mRequestState = tmpMRequestState == -1 ? null : EventState.values()
-                    [tmpMRequestState];
+            mRequestState = tmpMRequestState == -1 ? null : EventState.values()[tmpMRequestState];
         }
 
         public static final Creator<Builder> CREATOR = new Creator<Builder>() {
             @Override
-            public Builder createFromParcel(Parcel source) {
-                return new Builder(source);
+            public Builder createFromParcel(Parcel in) {
+                return new Builder(in);
             }
 
             @Override
@@ -753,6 +747,7 @@ public final class IconRequest {
                 StringBuilder amSb = null;
                 StringBuilder trSb = null;
                 StringBuilder jsonSb = null;
+
                 if (mBuilder.mGenerateAppFilterXml) {
                     xmlSb = new StringBuilder("<resources>\n" +
                             "\t<iconback img1=\"iconback\"/>\n" +
@@ -760,9 +755,11 @@ public final class IconRequest {
                             "\t<iconupon img1=\"iconupon\"/>\n" +
                             "\t<scale factor=\"1.0\"/>");
                 }
+
                 if (mBuilder.mGenerateAppMapXml) {
                     amSb = new StringBuilder("<appmap>");
                 }
+
                 if (mBuilder.mGenerateThemeResourcesXml) {
                     trSb = new StringBuilder("<Theme version=\"1\">\n" +
                             "\t<Label value=\"" + mBuilder.mAppName + "\"/>\n" +
@@ -773,10 +770,12 @@ public final class IconRequest {
                             "\t<ThemePreviewMenu image=\"preview1\"/>\n" +
                             "\t<DockMenuAppIcon selector=\"drawer\"/>");
                 }
-                if (mBuilder.mGenerateAppFilterJson || mBuilder.mServerSetup) {
+
+                if (mBuilder.mGenerateAppFilterJson) {
                     jsonSb = new StringBuilder("{\n" +
                             "\t\"components\": [");
                 }
+
                 int index = 0;
                 int n = 1;
                 appNames.clear();
@@ -888,8 +887,6 @@ public final class IconRequest {
                     }
                 }
 
-                final boolean[] filesUploaded = {false};
-
                 if (jsonSb != null) {
                     jsonSb.append("\n    ]\n}");
                     final File newAppFilter = new File(mBuilder.mSaveDir, String.format
@@ -897,34 +894,6 @@ public final class IconRequest {
                     filesToZip.add(newAppFilter);
                     try {
                         FileUtil.writeAll(newAppFilter, jsonSb.toString());
-                        if (mBuilder.mServerSetup && IRUtils.hasNetwork(mBuilder.mContext)) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        upload("jficons.cba.pl", mBuilder.mServerUserName,
-                                                mBuilder.mServerPassword, mBuilder.mServerFolder,
-                                                String.format("IconRequest-%s.zip", date),
-                                                newAppFilter);
-                                        IRLog.d("Cleaning up files...");
-                                        final File[] files = mBuilder.mSaveDir.listFiles();
-                                        for (File fi : files) {
-                                            if (!fi.isDirectory() && (fi.getName().endsWith(".png")
-                                                    || fi.getName()
-                                                    .endsWith(".xml") || (fi.getName().endsWith
-                                                    ("-srvr.zip")))) {
-                                                fi.delete();
-                                            }
-                                        }
-                                        filesUploaded[0] = true;
-                                    } catch (Exception e) {
-                                        IRLog.d("ServerSide - Exception");
-                                        e.printStackTrace();
-                                        filesUploaded[0] = false;
-                                    }
-                                }
-                            }).start();
-                        }
                     } catch (final Exception e) {
                         e.printStackTrace();
                         postError("Failed to write your request appfilter.json file: " + e
@@ -961,14 +930,14 @@ public final class IconRequest {
                 }
 
                 if (callback != null) {
-                    callback.onRequestReady(mBuilder.mServerSetup, filesUploaded[0]);
+                    callback.onRequestReady();
                 }
 
-                if (!mBuilder.mServerSetup) {
-                    // post(new Runnable() {
-                    // @Override
-                    // public void run() {
-                    // Send email intent
+                // post(new Runnable() {
+                // @Override
+                // public void run() {
+                // Send email intent
+                if (canSendRequest()) {
                     IRLog.d("Launching intent!");
                     final Uri zipUri = Uri.fromFile(zipFile);
                     final Intent emailIntent = new Intent(Intent.ACTION_SEND)
@@ -979,11 +948,39 @@ public final class IconRequest {
                             .setType("application/zip");
                     mBuilder.mContext.startActivity(Intent.createChooser(
                             emailIntent, mBuilder.mContext.getString(R.string.send_using)));
+                    EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
+                } else {
+                    if (callback != null) {
+                        callback.onRequestLimited(getMillisToFinish());
+                    }
                 }
-                EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
             }
         })
                 .start();
+    }
+
+    private boolean canSendRequest() {
+        if (mBuilder.mTimeLimit <= 0) return true;
+        IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " + mBuilder
+                .mTimeLimit);
+        if (getMillisToFinish() <= 0) {
+            mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, TimeUtils
+                    .getCurrentTimeInMillis()).apply();
+            return true;
+        }
+        return false;
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private long getMillisToFinish() {
+        long savedTime = mBuilder.mPrefs.getLong(KEY_SAVED_TIME_MILLIS, -1);
+        if (savedTime == -1) return -1;
+        long elapsedTime = TimeUtils.getCurrentTimeInMillis() - savedTime;
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd,yyyy HH:mm:ss");
+        IRLog.d("Timer: [Last request was on: " + sdf.format(savedTime) + "] - [Right" +
+                " now is: " + sdf.format(new Date(TimeUtils.getCurrentTimeInMillis())) + "] - " +
+                "[Elapsed Time: " + ((mBuilder.mTimeLimit - elapsedTime) / 1000) + " secs.]");
+        return mBuilder.mTimeLimit - elapsedTime;
     }
 
     public static void saveInstanceState(Bundle outState) {
@@ -1033,82 +1030,6 @@ public final class IconRequest {
         }
         IRUtils.clearTimers();
         mRequest = null;
-    }
-
-    public interface RequestReadyCallback {
-        void onRequestReady(boolean withServerUpload, boolean uploadSuccessful);
-    }
-
-    /**
-     * Upload a file to a FTP server. A FTP URL is generated with the following syntax:
-     * ftp://user:password@host:port/filePath;type=i.
-     *
-     * @param ftpServer , FTP server address (optional port ':portNumber').
-     * @param user      , Optional user name to login.
-     * @param password  , Optional password for user.
-     * @param source    , Source file to upload.
-     * @throws MalformedURLException, IOException on error.
-     */
-    public void upload(String ftpServer, String user, String password, String folder, String
-            fileName, File
-                               source) throws
-            MalformedURLException,
-            IOException {
-        if (ftpServer != null && source != null) {
-            StringBuffer sb = new StringBuffer("ftp://");
-            // check for authentication else assume its anonymous access.
-            if (user != null && password != null) {
-                sb.append(user);
-                sb.append(':');
-                sb.append(password);
-                sb.append('@');
-                sb.append(ftpServer);
-                sb.append('/');
-                sb.append("requests");
-                sb.append('/');
-                sb.append(user.toLowerCase());
-                sb.append('/');
-                sb.append(folder);
-                sb.append('/');
-                sb.append(fileName);
-         /*
-          * type ==&gt; a=ASCII mode, i=image (binary) mode, d= file directory
-          * listing
-          */
-                sb.append(";type=i");
-
-                BufferedInputStream bis = null;
-                BufferedOutputStream bos = null;
-                try {
-                    URL url = new URL(sb.toString());
-                    URLConnection urlc = url.openConnection();
-
-                    bos = new BufferedOutputStream(urlc.getOutputStream());
-                    bis = new BufferedInputStream(new FileInputStream(source));
-
-                    int i;
-                    // read byte by byte until end of stream
-                    while ((i = bis.read()) != -1) {
-                        bos.write(i);
-                    }
-                } finally {
-                    if (bis != null)
-                        try {
-                            bis.close();
-                        } catch (IOException ioe) {
-                            ioe.printStackTrace();
-                        }
-                    if (bos != null)
-                        try {
-                            bos.close();
-                        } catch (IOException ioe) {
-                            ioe.printStackTrace();
-                        }
-                }
-            }
-        } else {
-            IRLog.d("Input not available.");
-        }
     }
 
 }

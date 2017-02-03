@@ -56,11 +56,11 @@ public class IRUtils {
                             .labelRes);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                // Do nothing
             }
             appName = pm.getApplicationLabel(appInfo).toString();
         } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
+            // Do nothing
         }
         return appName != null ? appName : defaultName;
     }
@@ -138,10 +138,4 @@ public class IRUtils {
         mTimers = null;
     }
 
-    public static boolean hasNetwork(Context context) {
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context
-                .CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
-    }
 }

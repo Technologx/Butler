@@ -1,9 +1,9 @@
-package com.pitchedapps.butler;
+package com.pitchedapps.butler.sample;
 
 import android.os.Bundle;
 
 import com.pitchedapps.butler.iconrequest.IconRequest;
-import com.pitchedapps.butler.request.RequestFragment;
+import com.pitchedapps.butler.sample.request.RequestFragment;
 import com.pitchedapps.capsule.library.activities.CapsuleActivity;
 
 public class MainActivity extends CapsuleActivity {

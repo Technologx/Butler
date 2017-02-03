@@ -62,9 +62,10 @@ public class ComponentInfoUtil {
         int loaded = 0;
         int filtered = 0;
         for (ResolveInfo ri : packageList) {
-            String launchStr = ri.activityInfo.packageName + "/" + ri.activityInfo.name;
+            String riPkg = ri.activityInfo.packageName;
+            String launchStr = riPkg + "/" + ri.activityInfo.name;
 
-            if (filter.contains(launchStr)) {
+            if ((filter.contains(launchStr)) || (context.getPackageName().equals(riPkg))) {
                 filtered++;
                 IRLog.d("Filtered %s", launchStr);
                 continue;
@@ -75,12 +76,9 @@ public class ComponentInfoUtil {
             if (name == null) name = ri.activityInfo.packageName;
             apps.add(new App(IRUtils.getLocalizedName(context, launchStr, name.toString()),
                     launchStr, ri.activityInfo.packageName));
-
             loaded++;
             final int percent = (loaded * 100 / packageList.size());
             EventBusUtils.post(new AppLoadingEvent(percent), loadingState);
-            // TODO: Test and remove this
-            IRLog.d("Loading apps to request. Progress: " + percent + "%");
         }
 
         IRLog.d("Loaded %d total app(s), filtered out %d app(s).", apps.size(), filtered);

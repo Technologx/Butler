@@ -1,6 +1,7 @@
-package com.pitchedapps.butler.request;
+package com.pitchedapps.butler.sample.request;
 
 import android.Manifest;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.Snackbar;
@@ -11,13 +12,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.pitchedapps.butler.BuildConfig;
-import com.pitchedapps.butler.R;
+import com.pitchedapps.butler.iconrequest.IconRequest;
+import com.pitchedapps.butler.iconrequest.RequestReadyCallback;
 import com.pitchedapps.butler.iconrequest.events.AppLoadedEvent;
 import com.pitchedapps.butler.iconrequest.events.AppLoadingEvent;
 import com.pitchedapps.butler.iconrequest.events.EventState;
-import com.pitchedapps.butler.iconrequest.IconRequest;
+import com.pitchedapps.butler.sample.BuildConfig;
+import com.pitchedapps.butler.sample.R;
 import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
 import com.pitchedapps.capsule.library.permissions.CPermissionCallback;
 import com.pitchedapps.capsule.library.permissions.PermissionResult;
@@ -29,6 +32,7 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Allan Wang on 2016-08-20.
@@ -90,8 +94,32 @@ public class RequestFragment extends CapsuleFragment {
             @Override
             public void onResult(PermissionResult result) {
                 if (result.isAllGranted()) {
-                    // TODO: Add a callback if you want Allan.
-                    IconRequest.get().send(null);
+                    if (IconRequest.get() != null) {
+                        IconRequest.get().send(new RequestReadyCallback() {
+                            @Override
+                            public void onRequestReady() {
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "Starting send intent...",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onRequestLimited(final long millis) {
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "Request limited. Time " +
+                                                "left: " + TimeUnit.MILLISECONDS.toSeconds
+                                                (millis) + " seconds.", Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                            }
+                        });
+                    }
                 }
             }
         }, 9, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -125,10 +153,11 @@ public class RequestFragment extends CapsuleFragment {
                     .withFooter("%s Version: %s", getString(R.string.app_name), BuildConfig
                             .VERSION_NAME)
                     .withSubject("Icon Request - Just a Test")
-                    .withServerUpload("devs", "iconshowcasedevs", "butler")
                     .toEmail("fake-email@fake-website.com")
                     .saveDir(new File(Environment.getExternalStorageDirectory(),
                             "Pitched_Apps/Capsule"))
+                    .withTimeLimit(2, getActivity().getSharedPreferences("ButlerPrefs", Context
+                            .MODE_PRIVATE))
                     .includeDeviceInfo(true)
                     .generateAppFilterXml(true)
                     .generateAppFilterJson(false)
@@ -137,7 +166,7 @@ public class RequestFragment extends CapsuleFragment {
                     .loadingEvents(EventState.DISABLED)
                     .selectionEvents(EventState.DISABLED)
                     .filterOff()
-                    .debugMode(true)
+                    .debugMode(BuildConfig.DEBUG)
                     .build().loadApps();
         }
     }

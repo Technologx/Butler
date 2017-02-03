@@ -1,4 +1,4 @@
-package com.pitchedapps.butler.request;
+package com.pitchedapps.butler.sample.request;
 
 import android.support.annotation.Nullable;
 import android.support.v7.widget.AppCompatCheckBox;
@@ -10,12 +10,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Priority;
-import com.pitchedapps.butler.R;
 import com.pitchedapps.butler.iconrequest.App;
 import com.pitchedapps.butler.iconrequest.IconRequest;
+import com.pitchedapps.butler.sample.R;
 
 import java.util.ArrayList;
-
 
 public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.RequestsHolder> {
 
