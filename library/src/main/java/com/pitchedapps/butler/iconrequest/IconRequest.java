@@ -649,7 +649,8 @@ public final class IconRequest {
         final boolean result;
         if (getSelectedApps().size() >= getRequestsLeft()) {
             if (mBuilder.mCallback != null) {
-                mBuilder.mCallback.onRequestLimited(STATE_LIMITED, getRequestsLeft(), -1);
+                mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
+                        getRequestsLeft(), -1);
             }
             return false;
         }
@@ -672,7 +673,8 @@ public final class IconRequest {
                 mSelectedApps.add(app);
                 if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) {
                     if (mBuilder.mCallback != null)
-                        mBuilder.mCallback.onRequestLimited(STATE_LIMITED, getRequestsLeft(), -1);
+                        mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
+                                getRequestsLeft(), -1);
                 }
             }
         }
@@ -727,9 +729,9 @@ public final class IconRequest {
             if (mBuilder.mNoneSelectsAll) {
                 mSelectedApps = mApps;
             } else {
-                postError("No apps have been selected for sending in the request.", null);
                 if (mBuilder.mCallback != null)
-                    mBuilder.mCallback.onRequestEmpty();
+                    mBuilder.mCallback.onRequestEmpty(mBuilder.mContext);
+                postError("No apps have been selected for sending in the request.", null);
             }
         } else if (IRUtils.isEmpty(mBuilder.mSubject)) {
             mBuilder.mSubject = "Icon Request";
@@ -738,7 +740,6 @@ public final class IconRequest {
         @State int currentState = getRequestState();
 
         if (currentState == STATE_NORMAL) {
-
             new Thread(new Runnable() {
                 @SuppressWarnings({"ResultOfMethodCallIgnored", "deprecation"})
                 @Override
@@ -989,7 +990,8 @@ public final class IconRequest {
                     .start();
         } else {
             if (mBuilder.mCallback != null)
-                mBuilder.mCallback.onRequestLimited(currentState, getRequestsLeft(),
+                mBuilder.mCallback.onRequestLimited(mBuilder.mContext, currentState,
+                        getRequestsLeft(),
                         getMillisToFinish());
         }
     }

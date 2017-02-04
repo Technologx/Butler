@@ -160,17 +160,17 @@ public class RequestFragment extends CapsuleFragment {
                     .debugMode(BuildConfig.DEBUG)
                     .setCallback(new RequestsCallback() {
                         @Override
-                        public void onRequestLimited(@IconRequest.State final int reason, final int
-                                requestsLeft, final long millis) {
+                        public void onRequestLimited(final Context context, @IconRequest.State
+                        final int reason, final int requestsLeft, final long millis) {
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
                                     if (reason == STATE_TIME_LIMITED && millis > 0) {
-                                        Toast.makeText(getActivity(), "Request limited. Time " +
+                                        Toast.makeText(context, "Request limited. Time " +
                                                 "left: " + TimeUnit.MILLISECONDS.toSeconds
                                                 (millis) + " seconds.", Toast.LENGTH_LONG).show();
                                     } else if (reason == STATE_LIMITED) {
-                                        Toast.makeText(getActivity(), "Request limited. Requests " +
+                                        Toast.makeText(context, "Request limited. Requests " +
                                                 "left: " + requestsLeft + ".", Toast.LENGTH_LONG)
                                                 .show();
                                     }
@@ -179,8 +179,8 @@ public class RequestFragment extends CapsuleFragment {
                         }
 
                         @Override
-                        public void onRequestEmpty() {
-                            Toast.makeText(getActivity(), "No apps selected to request.", Toast
+                        public void onRequestEmpty(Context context) {
+                            Toast.makeText(context, "No apps selected to request.", Toast
                                     .LENGTH_LONG).show();
                         }
                     })

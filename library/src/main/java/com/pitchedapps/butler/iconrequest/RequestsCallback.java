@@ -1,8 +1,10 @@
 package com.pitchedapps.butler.iconrequest;
 
-public abstract class RequestsCallback {
-    public abstract void onRequestLimited(@IconRequest.State int reason, int requestsLeft, long
-            millis);
+import android.content.Context;
 
-    public abstract void onRequestEmpty();
+public abstract class RequestsCallback {
+    public abstract void onRequestLimited(Context context, @IconRequest.State int reason, int
+            requestsLeft, long millis);
+
+    public abstract void onRequestEmpty(Context context);
 }
