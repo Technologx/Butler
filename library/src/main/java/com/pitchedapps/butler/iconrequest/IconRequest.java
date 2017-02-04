@@ -738,6 +738,7 @@ public final class IconRequest {
                 if (mBuilder.mCallback != null)
                     mBuilder.mCallback.onRequestEmpty(mBuilder.mContext);
                 postError("No apps have been selected for sending in the request.", null);
+                return;
             }
         } else if (IRUtils.isEmpty(mBuilder.mSubject)) {
             mBuilder.mSubject = "Icon Request";
@@ -988,6 +989,7 @@ public final class IconRequest {
                             .putExtra(Intent.EXTRA_TEXT, Html.fromHtml(getBody()))
                             .putExtra(Intent.EXTRA_STREAM, zipUri)
                             .setType("application/zip");
+                    setRequestMoment();
                     mBuilder.mContext.startActivity(Intent.createChooser(
                             emailIntent, mBuilder.mContext.getString(R.string.send_using)));
                     EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
@@ -1005,16 +1007,19 @@ public final class IconRequest {
     @State
     private int getRequestState() {
         if ((mBuilder.mMaxCount > 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
-        IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " +
-                mBuilder.mTimeLimit);
         if (getSelectedApps().size() > mBuilder.mMaxCount) {
             return STATE_LIMITED;
         } else if (getMillisToFinish() > 0) {
-            mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, IRUtils.getCurrentTimeInMillis
-                    ()).apply();
+            IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " +
+                    mBuilder.mTimeLimit);
             return STATE_TIME_LIMITED;
         }
         return STATE_NORMAL;
+    }
+
+    private void setRequestMoment() {
+        mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, IRUtils.getCurrentTimeInMillis())
+                .apply();
     }
 
     @SuppressLint("SimpleDateFormat")
