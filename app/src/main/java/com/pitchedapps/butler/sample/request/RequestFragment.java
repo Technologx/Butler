@@ -15,7 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pitchedapps.butler.iconrequest.IconRequest;
-import com.pitchedapps.butler.iconrequest.RequestReadyCallback;
+import com.pitchedapps.butler.iconrequest.RequestsCallback;
 import com.pitchedapps.butler.iconrequest.events.AppLoadedEvent;
 import com.pitchedapps.butler.iconrequest.events.AppLoadingEvent;
 import com.pitchedapps.butler.iconrequest.events.EventState;
@@ -95,7 +95,7 @@ public class RequestFragment extends CapsuleFragment {
             public void onResult(PermissionResult result) {
                 if (result.isAllGranted()) {
                     if (IconRequest.get() != null) {
-                        IconRequest.get().send(new RequestReadyCallback() {
+                        IconRequest.get().send(new RequestsCallback() {
                             @Override
                             public void onRequestReady() {
                                 getActivity().runOnUiThread(new Runnable() {

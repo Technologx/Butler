@@ -18,6 +18,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.CallSuper;
 import android.support.annotation.CheckResult;
+import android.support.annotation.IntDef;
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -44,6 +45,8 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -58,11 +61,24 @@ import timber.log.Timber;
  */
 public final class IconRequest {
 
+    @IntDef({STATE_NORMAL, STATE_LIMITED, STATE_TIME_LIMITED})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface State {
+    }
+
+    public static final int STATE_NORMAL = 0;
+    public static final int STATE_LIMITED = 1;
+    public static final int STATE_TIME_LIMITED = 2;
+
+    @State
+    private int state = STATE_NORMAL;
+
     private Builder mBuilder;
     private ArrayList<App> mApps;
     private ArrayList<App> mSelectedApps;
 
-    public static final String KEY_SAVED_TIME_MILLIS = "saved_time_millis";
+    private static final String KEY_SAVED_TIME_MILLIS = "saved_time_millis";
+    private static final String MAX_APPS = "apps_to_request";
 
     private static IconRequest mRequest;
 
@@ -166,7 +182,7 @@ public final class IconRequest {
 
         public Builder maxSelectionCount(@IntRange(from = 0) int count) {
             mMaxCount = count;
-            mHasMaxCount = mMaxCount != 0;
+            mHasMaxCount = mMaxCount > 0;
             return this;
         }
 
@@ -347,9 +363,9 @@ public final class IconRequest {
         XmlResourceParser parser = null;
         try {
             parser = mBuilder.mContext.getResources().getXml(mBuilder.mFilterId);
-            String mAppCode = null;
             int eventType = parser.getEventType();
             while (eventType != XmlPullParser.END_DOCUMENT) {
+                String mAppCode;
                 switch (eventType) {
                     case XmlPullParser.START_TAG:
                         final String tagName = parser.getName();
@@ -360,14 +376,11 @@ public final class IconRequest {
                                 mAppCode = mAppCode.substring(14, mAppCode.length() - 1);
                                 //wrapped in ComponentInfo{[Component]} TODO add checker?
                                 //TODO check for valid drawable
-                                // Add new info to our ArrayList and reset the object. Log
-                                // commented out to reduce logcat spam.
+                                // Add new info to our ArrayList and reset the object.
                                 defined.add(mAppCode);
-                                //if(debugEnabled)
-                                //	Log.d(LOG_TAG, "Added appfilter app:\n" + mAppCode);
-                                mAppCode = null;
-
                             } catch (Exception e) {
+                                // TODO Remove this
+                                e.printStackTrace();
                                 IRLog.d("Error adding parsed appfilter item!", e);
                             }
                         }
@@ -687,7 +700,7 @@ public final class IconRequest {
                 mBuilder.mRequestState);
     }
 
-    public void send(final RequestReadyCallback callback) {
+    public void send(final RequestsCallback callback) {
         IRLog.d("Preparing your request to send...");
         EventBusUtils.post(new RequestEvent(true, false, null), mBuilder.mRequestState);
         if (mApps == null) {
@@ -699,244 +712,251 @@ public final class IconRequest {
                 mSelectedApps = mApps;
             } else {
                 postError("No apps have been selected for sending in the request.", null);
+                if (callback != null)
+                    callback.onRequestEmpty();
             }
         } else if (IRUtils.isEmpty(mBuilder.mSubject)) {
             mBuilder.mSubject = "Icon Request";
         }
 
-        new Thread(new Runnable() {
-            @SuppressWarnings({"ResultOfMethodCallIgnored", "deprecation"})
-            @Override
-            public void run() {
-                final ArrayList<File> filesToZip = new ArrayList<>();
+        @State int currentState = getRequestState();
 
-                FileUtil.wipe(mBuilder.mSaveDir);
-                mBuilder.mSaveDir.mkdirs();
+        if (currentState == STATE_NORMAL) {
 
-                // Save app icons
-                IRLog.d("Saving icons...");
-                ArrayList<String> appNames = new ArrayList<>();
-                int i = 1;
-                for (App app : mSelectedApps) {
-                    String iconName = app.getName();
-                    if (appNames.contains(iconName)) {
-                        iconName += String.valueOf(i);
-                        i += 1;
+            new Thread(new Runnable() {
+                @SuppressWarnings({"ResultOfMethodCallIgnored", "deprecation"})
+                @Override
+                public void run() {
+                    final ArrayList<File> filesToZip = new ArrayList<>();
+
+                    FileUtil.wipe(mBuilder.mSaveDir);
+                    mBuilder.mSaveDir.mkdirs();
+
+                    // Save app icons
+                    IRLog.d("Saving icons...");
+                    ArrayList<String> appNames = new ArrayList<>();
+                    int i = 1;
+                    for (App app : mSelectedApps) {
+                        String iconName = app.getName();
+                        if (appNames.contains(iconName)) {
+                            iconName += String.valueOf(i);
+                            i += 1;
+                        }
+                        final Drawable drawable = app.getHighResIcon(mBuilder.mContext);
+                        if (!(drawable instanceof BitmapDrawable)) continue;
+                        final BitmapDrawable bDrawable = (BitmapDrawable) drawable;
+                        final Bitmap icon = bDrawable.getBitmap();
+                        final File file = new File(mBuilder.mSaveDir,
+                                String.format("%s.png", IRUtils.drawableName(iconName)));
+                        appNames.add(iconName);
+                        filesToZip.add(file);
+                        try {
+                            FileUtil.writeIcon(file, icon);
+                        } catch (final Exception e) {
+                            e.printStackTrace();
+                            postError("Failed to save an icon: " + e.getMessage(), e);
+                            return;
+                        }
                     }
-                    final Drawable drawable = app.getHighResIcon(mBuilder.mContext);
-                    if (!(drawable instanceof BitmapDrawable)) continue;
-                    final BitmapDrawable bDrawable = (BitmapDrawable) drawable;
-                    final Bitmap icon = bDrawable.getBitmap();
-                    final File file = new File(mBuilder.mSaveDir,
-                            String.format("%s.png", IRUtils.drawableName(iconName)));
-                    appNames.add(iconName);
-                    filesToZip.add(file);
-                    try {
-                        FileUtil.writeIcon(file, icon);
-                    } catch (final Exception e) {
-                        e.printStackTrace();
-                        postError("Failed to save an icon: " + e.getMessage(), e);
-                        return;
+
+                    // Create request files
+                    IRLog.d("Creating request files...");
+                    StringBuilder xmlSb = null;
+                    StringBuilder amSb = null;
+                    StringBuilder trSb = null;
+                    StringBuilder jsonSb = null;
+
+                    if (mBuilder.mGenerateAppFilterXml) {
+                        xmlSb = new StringBuilder("<resources>\n" +
+                                "\t<iconback img1=\"iconback\"/>\n" +
+                                "\t<iconmask img1=\"iconmask\"/>\n" +
+                                "\t<iconupon img1=\"iconupon\"/>\n" +
+                                "\t<scale factor=\"1.0\"/>");
                     }
-                }
 
-                // Create request files
-                IRLog.d("Creating request files...");
-                StringBuilder xmlSb = null;
-                StringBuilder amSb = null;
-                StringBuilder trSb = null;
-                StringBuilder jsonSb = null;
-
-                if (mBuilder.mGenerateAppFilterXml) {
-                    xmlSb = new StringBuilder("<resources>\n" +
-                            "\t<iconback img1=\"iconback\"/>\n" +
-                            "\t<iconmask img1=\"iconmask\"/>\n" +
-                            "\t<iconupon img1=\"iconupon\"/>\n" +
-                            "\t<scale factor=\"1.0\"/>");
-                }
-
-                if (mBuilder.mGenerateAppMapXml) {
-                    amSb = new StringBuilder("<appmap>");
-                }
-
-                if (mBuilder.mGenerateThemeResourcesXml) {
-                    trSb = new StringBuilder("<Theme version=\"1\">\n" +
-                            "\t<Label value=\"" + mBuilder.mAppName + "\"/>\n" +
-                            "\t<Wallpaper image=\"wallpaper_01\"/>\n" +
-                            "\t<LockScreenWallpaper image=\"wallpaper_02\"/>\n" +
-                            "\t<ThemePreview image=\"preview1\"/>\n" +
-                            "\t<ThemePreviewWork image=\"preview1\"/>\n" +
-                            "\t<ThemePreviewMenu image=\"preview1\"/>\n" +
-                            "\t<DockMenuAppIcon selector=\"drawer\"/>");
-                }
-
-                if (mBuilder.mGenerateAppFilterJson) {
-                    jsonSb = new StringBuilder("{\n" +
-                            "\t\"components\": [");
-                }
-
-                int index = 0;
-                int n = 1;
-                appNames.clear();
-                for (App app : mSelectedApps) {
-                    final String name = app.getName();
-                    String iconName = name;
-                    if (appNames.contains(iconName)) {
-                        iconName += String.valueOf(n);
-                        n += 1;
+                    if (mBuilder.mGenerateAppMapXml) {
+                        amSb = new StringBuilder("<appmap>");
                     }
-                    final String drawableName = IRUtils.drawableName(iconName);
+
+                    if (mBuilder.mGenerateThemeResourcesXml) {
+                        trSb = new StringBuilder("<Theme version=\"1\">\n" +
+                                "\t<Label value=\"" + mBuilder.mAppName + "\"/>\n" +
+                                "\t<Wallpaper image=\"wallpaper_01\"/>\n" +
+                                "\t<LockScreenWallpaper image=\"wallpaper_02\"/>\n" +
+                                "\t<ThemePreview image=\"preview1\"/>\n" +
+                                "\t<ThemePreviewWork image=\"preview1\"/>\n" +
+                                "\t<ThemePreviewMenu image=\"preview1\"/>\n" +
+                                "\t<DockMenuAppIcon selector=\"drawer\"/>");
+                    }
+
+                    if (mBuilder.mGenerateAppFilterJson) {
+                        jsonSb = new StringBuilder("{\n" +
+                                "\t\"components\": [");
+                    }
+
+                    int index = 0;
+                    int n = 1;
+                    appNames.clear();
+                    for (App app : mSelectedApps) {
+                        final String name = app.getName();
+                        String iconName = name;
+                        if (appNames.contains(iconName)) {
+                            iconName += String.valueOf(n);
+                            n += 1;
+                        }
+                        final String drawableName = IRUtils.drawableName(iconName);
+                        if (xmlSb != null) {
+                            xmlSb.append("\n\n");
+                            if (mBuilder.mComments) {
+                                xmlSb.append("\t<!-- ")
+                                        .append(name)
+                                        .append(" -->\n");
+                            }
+                            xmlSb.append(String.format("\t<item\n" +
+                                            "\t\tcomponent=\"ComponentInfo{%s}\"\n" +
+                                            "\t\tdrawable=\"%s\"/>",
+                                    app.getCode(), drawableName));
+                        }
+                        if (amSb != null) {
+                            amSb.append("\n\n");
+                            if (mBuilder.mComments) {
+                                amSb.append("\t<!-- ")
+                                        .append(name)
+                                        .append(" -->\n");
+                            }
+                            amSb.append(String.format("\t<item\n" +
+                                            "\t\tclass=\"%s\"\n" +
+                                            "\t\tname=\"%s\"/>",
+                                    app.getCode().split("/")[1], drawableName));
+                        }
+                        if (trSb != null) {
+                            trSb.append("\n\n");
+                            if (mBuilder.mComments) {
+                                trSb.append("\t<!-- ")
+                                        .append(name)
+                                        .append(" -->\n");
+                            }
+                            trSb.append(String.format("\t<AppIcon\n" +
+                                            "\t\tname=\"%s\"\n" +
+                                            "\t\timage=\"%s\"/>",
+                                    app.getCode(), drawableName));
+                        }
+                        if (jsonSb != null) {
+                            if (index > 0) jsonSb.append(",");
+                            jsonSb.append("\n        {\n")
+                                    .append(String.format("\t\t\t\"%s\": \"%s\",\n", "name", name))
+                                    .append(String.format("\t\t\t\"%s\": \"%s\",\n", "pkg", app
+                                            .getPackage()))
+                                    .append(String.format("\t\t\t\"%s\": \"%s\",\n",
+                                            "componentInfo",
+                                            app.getCode()))
+                                    .append(String.format("\t\t\t\"%s\": \"%s\"\n", "drawable",
+                                            drawableName))
+                                    .append("\t\t}");
+                        }
+                        index++;
+                        appNames.add(iconName);
+                    }
+
+                    final String date = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+                            .format
+                                    (new Date());
+
                     if (xmlSb != null) {
-                        xmlSb.append("\n\n");
-                        if (mBuilder.mComments) {
-                            xmlSb.append("\t<!-- ")
-                                    .append(name)
-                                    .append(" -->\n");
+                        xmlSb.append("\n\n</resources>");
+                        final File newAppFilter = new File(mBuilder.mSaveDir, String.format
+                                ("appfilter_%s.xml", date));
+                        filesToZip.add(newAppFilter);
+                        try {
+                            FileUtil.writeAll(newAppFilter, xmlSb.toString());
+                        } catch (final Exception e) {
+                            e.printStackTrace();
+                            postError("Failed to write your request appfilter.xml file: " + e
+                                    .getMessage(), e);
+                            return;
                         }
-                        xmlSb.append(String.format("\t<item\n" +
-                                        "\t\tcomponent=\"ComponentInfo{%s}\"\n" +
-                                        "\t\tdrawable=\"%s\"/>",
-                                app.getCode(), drawableName));
                     }
+
                     if (amSb != null) {
-                        amSb.append("\n\n");
-                        if (mBuilder.mComments) {
-                            amSb.append("\t<!-- ")
-                                    .append(name)
-                                    .append(" -->\n");
+                        amSb.append("\n\n</appmap>");
+                        final File newAppFilter = new File(mBuilder.mSaveDir, String.format
+                                ("appmap_%s.xml", date));
+                        filesToZip.add(newAppFilter);
+                        try {
+                            FileUtil.writeAll(newAppFilter, amSb.toString());
+                        } catch (final Exception e) {
+                            e.printStackTrace();
+                            postError("Failed to write your request appmap.xml file: " + e
+                                    .getMessage
+                                            (), e);
+                            return;
                         }
-                        amSb.append(String.format("\t<item\n" +
-                                        "\t\tclass=\"%s\"\n" +
-                                        "\t\tname=\"%s\"/>",
-                                app.getCode().split("/")[1], drawableName));
                     }
                     if (trSb != null) {
-                        trSb.append("\n\n");
-                        if (mBuilder.mComments) {
-                            trSb.append("\t<!-- ")
-                                    .append(name)
-                                    .append(" -->\n");
+                        trSb.append("\n\n</Theme>");
+                        final File newAppFilter = new File(mBuilder.mSaveDir, String.format
+                                ("theme_resources_%s.xml", date));
+                        filesToZip.add(newAppFilter);
+                        try {
+                            FileUtil.writeAll(newAppFilter, trSb.toString());
+                        } catch (final Exception e) {
+                            e.printStackTrace();
+                            postError("Failed to write your request theme_resources.xml file: " + e
+                                    .getMessage(), e);
+                            return;
                         }
-                        trSb.append(String.format("\t<AppIcon\n" +
-                                        "\t\tname=\"%s\"\n" +
-                                        "\t\timage=\"%s\"/>",
-                                app.getCode(), drawableName));
                     }
+
                     if (jsonSb != null) {
-                        if (index > 0) jsonSb.append(",");
-                        jsonSb.append("\n        {\n")
-                                .append(String.format("\t\t\t\"%s\": \"%s\",\n", "name", name))
-                                .append(String.format("\t\t\t\"%s\": \"%s\",\n", "pkg", app
-                                        .getPackage()))
-                                .append(String.format("\t\t\t\"%s\": \"%s\",\n", "componentInfo",
-                                        app.getCode()))
-                                .append(String.format("\t\t\t\"%s\": \"%s\"\n", "drawable",
-                                        drawableName))
-                                .append("\t\t}");
+                        jsonSb.append("\n    ]\n}");
+                        final File newAppFilter = new File(mBuilder.mSaveDir, String.format
+                                ("appfilter_%s.json", date));
+                        filesToZip.add(newAppFilter);
+                        try {
+                            FileUtil.writeAll(newAppFilter, jsonSb.toString());
+                        } catch (final Exception e) {
+                            e.printStackTrace();
+                            postError("Failed to write your request appfilter.json file: " + e
+                                    .getMessage(), e);
+                            return;
+                        }
                     }
-                    index++;
-                    appNames.add(iconName);
-                }
 
-                final String date = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
-                        .format
-                                (new Date());
-
-                if (xmlSb != null) {
-                    xmlSb.append("\n\n</resources>");
-                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format
-                            ("appfilter_%s.xml", date));
-                    filesToZip.add(newAppFilter);
-                    try {
-                        FileUtil.writeAll(newAppFilter, xmlSb.toString());
-                    } catch (final Exception e) {
-                        e.printStackTrace();
-                        postError("Failed to write your request appfilter.xml file: " + e
-                                .getMessage(), e);
+                    if (filesToZip.size() == 0) {
+                        postError("There are no files to put into the ZIP archive.", null);
                         return;
                     }
-                }
 
-                if (amSb != null) {
-                    amSb.append("\n\n</appmap>");
-                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format
-                            ("appmap_%s.xml", date));
-                    filesToZip.add(newAppFilter);
+                    // Zip everything into an archive
+                    IRLog.d("Creating ZIP...");
+                    final File zipFile = new File(mBuilder.mSaveDir,
+                            String.format("IconRequest-%s.zip", date));
                     try {
-                        FileUtil.writeAll(newAppFilter, amSb.toString());
+                        ZipUtil.zip(zipFile, filesToZip.toArray(new File[filesToZip.size()]));
                     } catch (final Exception e) {
                         e.printStackTrace();
-                        postError("Failed to write your request appmap.xml file: " + e.getMessage
-                                (), e);
+                        postError("Failed to create the request ZIP file: " + e.getMessage(), e);
                         return;
                     }
-                }
-                if (trSb != null) {
-                    trSb.append("\n\n</Theme>");
-                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format
-                            ("theme_resources_%s.xml", date));
-                    filesToZip.add(newAppFilter);
-                    try {
-                        FileUtil.writeAll(newAppFilter, trSb.toString());
-                    } catch (final Exception e) {
-                        e.printStackTrace();
-                        postError("Failed to write your request theme_resources.xml file: " + e
-                                .getMessage(), e);
-                        return;
+
+                    // Cleanup files
+                    IRLog.d("Cleaning up files...");
+                    final File[] files = mBuilder.mSaveDir.listFiles();
+                    for (File fi : files) {
+                        if (!fi.isDirectory() && (fi.getName().endsWith(".png") || fi.getName()
+                                .endsWith(".xml"))) {
+                            fi.delete();
+                        }
                     }
-                }
 
-                if (jsonSb != null) {
-                    jsonSb.append("\n    ]\n}");
-                    final File newAppFilter = new File(mBuilder.mSaveDir, String.format
-                            ("appfilter_%s.json", date));
-                    filesToZip.add(newAppFilter);
-                    try {
-                        FileUtil.writeAll(newAppFilter, jsonSb.toString());
-                    } catch (final Exception e) {
-                        e.printStackTrace();
-                        postError("Failed to write your request appfilter.json file: " + e
-                                .getMessage(), e);
-                        return;
+                    if (callback != null) {
+                        callback.onRequestReady();
                     }
-                }
 
-                if (filesToZip.size() == 0) {
-                    postError("There are no files to put into the ZIP archive.", null);
-                    return;
-                }
-
-                // Zip everything into an archive
-                IRLog.d("Creating ZIP...");
-                final File zipFile = new File(mBuilder.mSaveDir,
-                        String.format("IconRequest-%s.zip", date));
-                try {
-                    ZipUtil.zip(zipFile, filesToZip.toArray(new File[filesToZip.size()]));
-                } catch (final Exception e) {
-                    e.printStackTrace();
-                    postError("Failed to create the request ZIP file: " + e.getMessage(), e);
-                    return;
-                }
-
-                // Cleanup files
-                IRLog.d("Cleaning up files...");
-                final File[] files = mBuilder.mSaveDir.listFiles();
-                for (File fi : files) {
-                    if (!fi.isDirectory() && (fi.getName().endsWith(".png") || fi.getName()
-                            .endsWith(".xml"))) {
-                        fi.delete();
-                    }
-                }
-
-                if (callback != null) {
-                    callback.onRequestReady();
-                }
-
-                // post(new Runnable() {
-                // @Override
-                // public void run() {
-                // Send email intent
-                if (canSendRequest()) {
+                    // post(new Runnable() {
+                    // @Override
+                    // public void run() {
+                    // Send email intent
                     IRLog.d("Launching intent!");
                     final Uri zipUri = Uri.fromFile(zipFile);
                     final Intent emailIntent = new Intent(Intent.ACTION_SEND)
@@ -948,26 +968,28 @@ public final class IconRequest {
                     mBuilder.mContext.startActivity(Intent.createChooser(
                             emailIntent, mBuilder.mContext.getString(R.string.send_using)));
                     EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
-                } else {
-                    if (callback != null) {
-                        callback.onRequestLimited(getMillisToFinish());
-                    }
                 }
-            }
-        })
-                .start();
+            })
+                    .start();
+        } else {
+            if (callback != null)
+                callback.onRequestLimited(currentState, getRequestsLeft(), getMillisToFinish());
+        }
     }
 
-    private boolean canSendRequest() {
-        if (mBuilder.mTimeLimit <= 0) return true;
-        IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " + mBuilder
-                .mTimeLimit);
-        if (getMillisToFinish() <= 0) {
-            mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, IRUtils
-                    .getCurrentTimeInMillis()).apply();
-            return true;
+    @State
+    private int getRequestState() {
+        if ((mBuilder.mMaxCount > 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
+        IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " +
+                mBuilder.mTimeLimit);
+        if (getSelectedApps().size() > mBuilder.mMaxCount) {
+            return STATE_LIMITED;
+        } else if (getMillisToFinish() > 0) {
+            mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, IRUtils.getCurrentTimeInMillis
+                    ()).apply();
+            return STATE_TIME_LIMITED;
         }
-        return false;
+        return STATE_NORMAL;
     }
 
     @SuppressLint("SimpleDateFormat")
@@ -980,6 +1002,20 @@ public final class IconRequest {
                 " now is: " + sdf.format(new Date(IRUtils.getCurrentTimeInMillis())) + "] - " +
                 "[Elapsed Time: " + ((mBuilder.mTimeLimit - elapsedTime) / 1000) + " secs.]");
         return mBuilder.mTimeLimit - elapsedTime;
+    }
+
+    private int getRequestsLeft() {
+        int requestsLeft = mBuilder.mPrefs.getInt(MAX_APPS, -1);
+        if (requestsLeft > -1) {
+            return requestsLeft;
+        } else {
+            resetRequestsLeft();
+            return mBuilder.mPrefs.getInt(MAX_APPS, mBuilder.mMaxCount);
+        }
+    }
+
+    private void resetRequestsLeft() {
+        mBuilder.mPrefs.edit().putInt(MAX_APPS, mBuilder.mMaxCount).apply();
     }
 
     public static void saveInstanceState(Bundle outState) {
