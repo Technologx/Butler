@@ -119,6 +119,7 @@ public final class IconRequest {
         protected boolean mErrorOnInvalidAppFilterDrawable = true;
         protected boolean mDebugMode = false;
         protected SharedPreferences mPrefs = null;
+        protected RequestsCallback mCallback = null;
         protected EventState mLoadingState = EventState.DISABLED,
                 mLoadedState = EventState.STICKIED,
                 mSelectionState = EventState.DISABLED,
@@ -255,6 +256,11 @@ public final class IconRequest {
 
         public Builder requestEvents(EventState state) {
             mRequestState = state;
+            return this;
+        }
+
+        public Builder setCallback(RequestsCallback callback) {
+            mCallback = callback;
             return this;
         }
 
@@ -641,6 +647,12 @@ public final class IconRequest {
 
     public boolean toggleAppSelected(@NonNull App app) {
         final boolean result;
+        if (getSelectedApps().size() >= getRequestsLeft()) {
+            if (mBuilder.mCallback != null) {
+                mBuilder.mCallback.onRequestLimited(STATE_LIMITED, getRequestsLeft(), -1);
+            }
+            return false;
+        }
         if (isAppSelected(app))
             result = unselectApp(app);
         else result = selectApp(app);
@@ -651,26 +663,30 @@ public final class IconRequest {
         return mSelectedApps.contains(app);
     }
 
-    public IconRequest selectAllApps() {
-        if (mApps == null) return this;
+    public boolean selectAllApps() {
+        if (mApps == null) return false;
         boolean changed = false;
         for (App app : mApps) {
             if (!mSelectedApps.contains(app)) {
                 changed = true;
                 mSelectedApps.add(app);
-                if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) break;
+                if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) {
+                    if (mBuilder.mCallback != null)
+                        mBuilder.mCallback.onRequestLimited(STATE_LIMITED, getRequestsLeft(), -1);
+                }
             }
         }
         if (changed)
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
                     .mSelectionState);
-        return this;
+        return changed;
     }
 
-    public void unselectAllApps() {
-        if (mSelectedApps == null || mSelectedApps.size() == 0) return;
+    public boolean unselectAllApps() {
+        if (mSelectedApps == null || mSelectedApps.size() == 0) return false;
         mSelectedApps.clear();
         EventBusUtils.post(new AppSelectionEvent(0), mBuilder.mSelectionState);
+        return true;
     }
 
     public boolean isNotEmpty() {
@@ -700,7 +716,7 @@ public final class IconRequest {
                 mBuilder.mRequestState);
     }
 
-    public void send(final RequestsCallback callback) {
+    public void send() {
         IRLog.d("Preparing your request to send...");
         EventBusUtils.post(new RequestEvent(true, false, null), mBuilder.mRequestState);
         if (mApps == null) {
@@ -712,8 +728,8 @@ public final class IconRequest {
                 mSelectedApps = mApps;
             } else {
                 postError("No apps have been selected for sending in the request.", null);
-                if (callback != null)
-                    callback.onRequestEmpty();
+                if (mBuilder.mCallback != null)
+                    mBuilder.mCallback.onRequestEmpty();
             }
         } else if (IRUtils.isEmpty(mBuilder.mSubject)) {
             mBuilder.mSubject = "Icon Request";
@@ -949,8 +965,8 @@ public final class IconRequest {
                         }
                     }
 
-                    if (callback != null) {
-                        callback.onRequestReady();
+                    if (mBuilder.mCallback != null) {
+                        mBuilder.mCallback.onRequestReady();
                     }
 
                     // post(new Runnable() {
@@ -972,8 +988,9 @@ public final class IconRequest {
             })
                     .start();
         } else {
-            if (callback != null)
-                callback.onRequestLimited(currentState, getRequestsLeft(), getMillisToFinish());
+            if (mBuilder.mCallback != null)
+                mBuilder.mCallback.onRequestLimited(currentState, getRequestsLeft(),
+                        getMillisToFinish());
         }
     }
 

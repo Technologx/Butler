@@ -34,6 +34,9 @@ import java.io.File;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import static com.pitchedapps.butler.iconrequest.IconRequest.STATE_LIMITED;
+import static com.pitchedapps.butler.iconrequest.IconRequest.STATE_TIME_LIMITED;
+
 /**
  * Created by Allan Wang on 2016-08-20.
  */
@@ -95,30 +98,7 @@ public class RequestFragment extends CapsuleFragment {
             public void onResult(PermissionResult result) {
                 if (result.isAllGranted()) {
                     if (IconRequest.get() != null) {
-                        IconRequest.get().send(new RequestsCallback() {
-                            @Override
-                            public void onRequestReady() {
-                                getActivity().runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(getActivity(), "Starting send intent...",
-                                                Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            }
-
-                            @Override
-                            public void onRequestLimited(final long millis) {
-                                getActivity().runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(getActivity(), "Request limited. Time " +
-                                                "left: " + TimeUnit.MILLISECONDS.toSeconds
-                                                (millis) + " seconds.", Toast.LENGTH_LONG).show();
-                                    }
-                                });
-                            }
-                        });
+                        IconRequest.get().send();
                     }
                 }
             }
@@ -167,6 +147,43 @@ public class RequestFragment extends CapsuleFragment {
                     .selectionEvents(EventState.DISABLED)
                     .filterOff()
                     .debugMode(BuildConfig.DEBUG)
+                    .setCallback(new RequestsCallback() {
+                        @Override
+                        public void onRequestReady() {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(getActivity(), "Starting send intent...",
+                                            Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onRequestLimited(@IconRequest.State final int reason, final int
+                                requestsLeft, final long millis) {
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (reason == STATE_TIME_LIMITED && millis > 0) {
+                                        Toast.makeText(getActivity(), "Request limited. Time " +
+                                                "left: " + TimeUnit.MILLISECONDS.toSeconds
+                                                (millis) + " seconds.", Toast.LENGTH_LONG).show();
+                                    } else if (reason == STATE_LIMITED) {
+                                        Toast.makeText(getActivity(), "Request limited. Requests " +
+                                                "left: " + requestsLeft + ".", Toast.LENGTH_LONG)
+                                                .show();
+                                    }
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onRequestEmpty() {
+                            Toast.makeText(getActivity(), "No apps selected to request.", Toast
+                                    .LENGTH_LONG).show();
+                        }
+                    })
                     .build().loadApps();
         }
     }
