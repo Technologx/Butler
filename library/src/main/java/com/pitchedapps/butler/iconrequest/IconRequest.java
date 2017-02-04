@@ -973,10 +973,6 @@ public final class IconRequest {
                         }
                     }
 
-                    if (onRequestReady != null) {
-                        onRequestReady.doWhenReady();
-                    }
-
                     // post(new Runnable() {
                     // @Override
                     // public void run() {
@@ -989,7 +985,12 @@ public final class IconRequest {
                             .putExtra(Intent.EXTRA_TEXT, Html.fromHtml(getBody()))
                             .putExtra(Intent.EXTRA_STREAM, zipUri)
                             .setType("application/zip");
-                    setRequestMoment();
+                    saveRequestMoment();
+                    saveRequestsLeft(mBuilder.mMaxCount - mSelectedApps.size());
+                    mSelectedApps.clear();
+                    if (onRequestReady != null) {
+                        onRequestReady.doWhenReady();
+                    }
                     mBuilder.mContext.startActivity(Intent.createChooser(
                             emailIntent, mBuilder.mContext.getString(R.string.send_using)));
                     EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
@@ -1017,7 +1018,7 @@ public final class IconRequest {
         return STATE_NORMAL;
     }
 
-    private void setRequestMoment() {
+    private void saveRequestMoment() {
         mBuilder.mPrefs.edit().putLong(KEY_SAVED_TIME_MILLIS, IRUtils.getCurrentTimeInMillis())
                 .apply();
     }
@@ -1039,13 +1040,13 @@ public final class IconRequest {
         if (requestsLeft > -1) {
             return requestsLeft;
         } else {
-            resetRequestsLeft();
+            saveRequestsLeft(mBuilder.mMaxCount);
             return mBuilder.mPrefs.getInt(MAX_APPS, mBuilder.mMaxCount);
         }
     }
 
-    private void resetRequestsLeft() {
-        mBuilder.mPrefs.edit().putInt(MAX_APPS, mBuilder.mMaxCount).apply();
+    private void saveRequestsLeft(int requestsLeft) {
+        mBuilder.mPrefs.edit().putInt(MAX_APPS, requestsLeft).apply();
     }
 
     public static void saveInstanceState(Bundle outState) {
