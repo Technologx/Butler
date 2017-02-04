@@ -98,7 +98,18 @@ public class RequestFragment extends CapsuleFragment {
             public void onResult(PermissionResult result) {
                 if (result.isAllGranted()) {
                     if (IconRequest.get() != null) {
-                        IconRequest.get().send();
+                        IconRequest.get().send(new IconRequest.OnRequestReady() {
+                            @Override
+                            public void doWhenReady() {
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "Starting send intent...",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+                        });
                     }
                 }
             }
@@ -148,17 +159,6 @@ public class RequestFragment extends CapsuleFragment {
                     .filterOff()
                     .debugMode(BuildConfig.DEBUG)
                     .setCallback(new RequestsCallback() {
-                        @Override
-                        public void onRequestReady() {
-                            getActivity().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(getActivity(), "Starting send intent...",
-                                            Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-
                         @Override
                         public void onRequestLimited(@IconRequest.State final int reason, final int
                                 requestsLeft, final long millis) {

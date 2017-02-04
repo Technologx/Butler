@@ -716,7 +716,7 @@ public final class IconRequest {
                 mBuilder.mRequestState);
     }
 
-    public void send() {
+    public void send(final OnRequestReady onRequestReady) {
         IRLog.d("Preparing your request to send...");
         EventBusUtils.post(new RequestEvent(true, false, null), mBuilder.mRequestState);
         if (mApps == null) {
@@ -965,8 +965,8 @@ public final class IconRequest {
                         }
                     }
 
-                    if (mBuilder.mCallback != null) {
-                        mBuilder.mCallback.onRequestReady();
+                    if (onRequestReady != null) {
+                        onRequestReady.doWhenReady();
                     }
 
                     // post(new Runnable() {
@@ -1082,6 +1082,10 @@ public final class IconRequest {
         }
         IRUtils.clearTimers();
         mRequest = null;
+    }
+
+    public interface OnRequestReady {
+        void doWhenReady();
     }
 
 }
