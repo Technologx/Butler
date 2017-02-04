@@ -1,6 +1,7 @@
 package com.pitchedapps.butler.iconrequest;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -69,6 +70,8 @@ public final class IconRequest {
     public static final int STATE_NORMAL = 0;
     public static final int STATE_LIMITED = 1;
     public static final int STATE_TIME_LIMITED = 2;
+
+    public static final int INTENT_CODE = 99;
 
     @State
     private int state = STATE_NORMAL;
@@ -985,14 +988,19 @@ public final class IconRequest {
                             .putExtra(Intent.EXTRA_TEXT, Html.fromHtml(getBody()))
                             .putExtra(Intent.EXTRA_STREAM, zipUri)
                             .setType("application/zip");
-                    saveRequestMoment();
                     saveRequestsLeft(mBuilder.mMaxCount - mSelectedApps.size());
-                    mSelectedApps.clear();
+                    saveRequestMoment();
                     if (onRequestReady != null) {
                         onRequestReady.doWhenReady();
                     }
-                    mBuilder.mContext.startActivity(Intent.createChooser(
-                            emailIntent, mBuilder.mContext.getString(R.string.send_using)));
+                    if (mBuilder.mContext instanceof Activity) {
+                        ((Activity) mBuilder.mContext).startActivityForResult(Intent.createChooser(
+                                emailIntent, mBuilder.mContext.getString(R.string.send_using)),
+                                INTENT_CODE);
+                    } else {
+                        mBuilder.mContext.startActivity(Intent.createChooser(
+                                emailIntent, mBuilder.mContext.getString(R.string.send_using)));
+                    }
                     EventBusUtils.post(new RequestEvent(false, true, null), mBuilder.mRequestState);
                 }
             })
