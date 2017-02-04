@@ -109,7 +109,7 @@ public final class IconRequest {
         protected long mTimeLimit = -1;
         protected boolean mIsLoading = false;
         protected boolean mHasMaxCount = false;
-        protected boolean mNoneSelectsAll = true;
+        protected boolean mNoneSelectsAll = false;
         protected boolean mIncludeDeviceInfo = true;
         protected boolean mComments = true;
         protected boolean mGenerateAppFilterXml = true;
@@ -670,12 +670,11 @@ public final class IconRequest {
     public boolean selectAllApps() {
         if (mApps == null) return false;
         boolean changed = false;
+        boolean limited = false;
         for (App app : mApps) {
             if (!mSelectedApps.contains(app)) {
                 if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) {
-                    if (mBuilder.mCallback != null)
-                        mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
-                                getRequestsLeft(), -1);
+                    limited = true;
                 } else {
                     changed = true;
                     mSelectedApps.add(app);
@@ -685,6 +684,9 @@ public final class IconRequest {
         if (changed)
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
                     .mSelectionState);
+        if (limited && mBuilder.mCallback != null)
+            mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
+                    getRequestsLeft(), -1);
         return changed;
     }
 
