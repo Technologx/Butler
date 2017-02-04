@@ -15,10 +15,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pitchedapps.butler.iconrequest.IconRequest;
-import com.pitchedapps.butler.iconrequest.RequestsCallback;
 import com.pitchedapps.butler.iconrequest.events.AppLoadedEvent;
 import com.pitchedapps.butler.iconrequest.events.AppLoadingEvent;
 import com.pitchedapps.butler.iconrequest.events.EventState;
+import com.pitchedapps.butler.iconrequest.events.OnRequestProgress;
+import com.pitchedapps.butler.iconrequest.events.RequestsCallback;
 import com.pitchedapps.butler.sample.BuildConfig;
 import com.pitchedapps.butler.sample.R;
 import com.pitchedapps.capsule.library.fragments.CapsuleFragment;
@@ -98,7 +99,18 @@ public class RequestFragment extends CapsuleFragment {
             public void onResult(PermissionResult result) {
                 if (result.isAllGranted()) {
                     if (IconRequest.get() != null) {
-                        IconRequest.get().send(new IconRequest.OnRequestReady() {
+                        IconRequest.get().send(new OnRequestProgress() {
+                            @Override
+                            public void doWhenStarted() {
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getActivity(), "Starting send intent...",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+
                             @Override
                             public void doWhenReady() {
                                 getActivity().runOnUiThread(new Runnable() {

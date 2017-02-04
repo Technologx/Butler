@@ -32,7 +32,9 @@ import com.pitchedapps.butler.iconrequest.events.AppLoadedEvent;
 import com.pitchedapps.butler.iconrequest.events.AppLoadingEvent;
 import com.pitchedapps.butler.iconrequest.events.AppSelectionEvent;
 import com.pitchedapps.butler.iconrequest.events.EventState;
+import com.pitchedapps.butler.iconrequest.events.OnRequestProgress;
 import com.pitchedapps.butler.iconrequest.events.RequestEvent;
+import com.pitchedapps.butler.iconrequest.events.RequestsCallback;
 import com.pitchedapps.butler.iconrequest.logs.IRLog;
 import com.pitchedapps.butler.iconrequest.logs.IRLogTree;
 import com.pitchedapps.butler.iconrequest.utils.ComponentInfoUtil;
@@ -390,7 +392,8 @@ public final class IconRequest {
                             } catch (Exception e) {
                                 // TODO Remove this
                                 e.printStackTrace();
-                                IRLog.d("Error adding parsed appfilter item!", e);
+                                IRLog.d("Error adding parsed appfilter item! Due to Exception: "
+                                        + e.getMessage());
                             }
                         }
                         break;
@@ -727,7 +730,7 @@ public final class IconRequest {
                 mBuilder.mRequestState);
     }
 
-    public void send(final OnRequestReady onRequestReady) {
+    public void send(final OnRequestProgress onRequestProgress) {
         IRLog.d("Preparing your request to send...");
         EventBusUtils.post(new RequestEvent(true, false, null), mBuilder.mRequestState);
         if (mApps == null) {
@@ -754,6 +757,9 @@ public final class IconRequest {
                 @SuppressWarnings({"ResultOfMethodCallIgnored", "deprecation"})
                 @Override
                 public void run() {
+                    if (onRequestProgress != null)
+                        onRequestProgress.doWhenStarted();
+
                     final ArrayList<File> filesToZip = new ArrayList<>();
 
                     FileUtil.wipe(mBuilder.mSaveDir);
@@ -988,11 +994,14 @@ public final class IconRequest {
                             .putExtra(Intent.EXTRA_TEXT, Html.fromHtml(getBody()))
                             .putExtra(Intent.EXTRA_STREAM, zipUri)
                             .setType("application/zip");
-                    saveRequestsLeft(mBuilder.mMaxCount - mSelectedApps.size());
+
+                    if (onRequestProgress != null)
+                        onRequestProgress.doWhenReady();
+
+                    saveRequestsLeft((getRequestsLeft() - mSelectedApps.size()) < 0 ? -1 :
+                            (getRequestsLeft() - mSelectedApps.size()));
                     saveRequestMoment();
-                    if (onRequestReady != null) {
-                        onRequestReady.doWhenReady();
-                    }
+
                     if (mBuilder.mContext instanceof Activity) {
                         ((Activity) mBuilder.mContext).startActivityForResult(Intent.createChooser(
                                 emailIntent, mBuilder.mContext.getString(R.string.send_using)),
@@ -1015,13 +1024,13 @@ public final class IconRequest {
 
     @State
     private int getRequestState() {
-        if ((mBuilder.mMaxCount > 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
-        if (getSelectedApps().size() > mBuilder.mMaxCount) {
-            return STATE_LIMITED;
-        } else if (getMillisToFinish() > 0) {
+        if ((mBuilder.mMaxCount <= 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
+        if (getMillisToFinish() > 0) {
             IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " +
                     mBuilder.mTimeLimit);
             return STATE_TIME_LIMITED;
+        } else if (getSelectedApps().size() > getRequestsLeft()) {
+            return STATE_LIMITED;
         }
         return STATE_NORMAL;
     }
@@ -1104,10 +1113,6 @@ public final class IconRequest {
         }
         IRUtils.clearTimers();
         mRequest = null;
-    }
-
-    public interface OnRequestReady {
-        void doWhenReady();
     }
 
 }
