@@ -647,16 +647,19 @@ public final class IconRequest {
 
     public boolean toggleAppSelected(@NonNull App app) {
         final boolean result;
-        if (getSelectedApps().size() >= getRequestsLeft()) {
-            if (mBuilder.mCallback != null) {
-                mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
-                        getRequestsLeft(), -1);
-            }
-            return false;
-        }
-        if (isAppSelected(app))
+        if (isAppSelected(app)) {
             result = unselectApp(app);
-        else result = selectApp(app);
+        } else {
+            if (getSelectedApps().size() >= getRequestsLeft()) {
+                if (mBuilder.mCallback != null) {
+                    mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
+                            getRequestsLeft(), -1);
+                }
+                return false;
+            } else {
+                result = selectApp(app);
+            }
+        }
         return result;
     }
 
@@ -669,12 +672,13 @@ public final class IconRequest {
         boolean changed = false;
         for (App app : mApps) {
             if (!mSelectedApps.contains(app)) {
-                changed = true;
-                mSelectedApps.add(app);
                 if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) {
                     if (mBuilder.mCallback != null)
                         mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
                                 getRequestsLeft(), -1);
+                } else {
+                    changed = true;
+                    mSelectedApps.add(app);
                 }
             }
         }
