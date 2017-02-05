@@ -633,7 +633,7 @@ public final class IconRequest {
     }
 
     public boolean selectApp(@NonNull App app) {
-        if (mBuilder.mHasMaxCount && mSelectedApps.size() >= getRequestsLeft()) return false;
+        if (getRequestState() != STATE_NORMAL) return false;
         if (!mSelectedApps.contains(app)) {
             mSelectedApps.add(app);
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
@@ -656,11 +656,11 @@ public final class IconRequest {
         if (isAppSelected(app)) {
             result = unselectApp(app);
         } else {
-            if (getSelectedApps().size() >= getRequestsLeft()) {
+            int state = getRequestState();
+            if (state != STATE_NORMAL) {
                 if (mBuilder.mCallback != null) {
-                    mBuilder.mCallback.onRequestLimited(mBuilder.mContext, getRequestsLeft() > 0
-                                    ? STATE_LIMITED : STATE_TIME_LIMITED, getRequestsLeft(),
-                            getMillisToFinish());
+                    mBuilder.mCallback.onRequestLimited(mBuilder.mContext, state, getRequestsLeft
+                            (), getMillisToFinish());
                 }
                 return false;
             } else {
@@ -677,11 +677,10 @@ public final class IconRequest {
     public boolean selectAllApps() {
         if (mApps == null) return false;
         boolean changed = false;
-        boolean limited = false;
+        int state = getRequestState();
         for (App app : mApps) {
             if (!mSelectedApps.contains(app)) {
-                if (mBuilder.mHasMaxCount && mSelectedApps.size() >= getRequestsLeft()) {
-                    limited = true;
+                if (mBuilder.mHasMaxCount && (state != STATE_NORMAL)) {
                 } else {
                     changed = true;
                     mSelectedApps.add(app);
@@ -691,9 +690,9 @@ public final class IconRequest {
         if (changed)
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
                     .mSelectionState);
-        if (limited && mBuilder.mCallback != null)
-            mBuilder.mCallback.onRequestLimited(mBuilder.mContext, getRequestsLeft() > 0 ?
-                    STATE_LIMITED : STATE_TIME_LIMITED, getRequestsLeft(), getMillisToFinish());
+        if ((state != STATE_NORMAL) && (mBuilder.mCallback != null))
+            mBuilder.mCallback.onRequestLimited(mBuilder.mContext, state, getRequestsLeft(),
+                    getMillisToFinish());
         return changed;
     }
 
@@ -1034,10 +1033,10 @@ public final class IconRequest {
     @State
     private int getRequestState() {
         if ((mBuilder.mMaxCount <= 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
-        IRLog.d("RequestState: Millis to finish: " + getMillisToFinish() + " - Request limit: " +
-                mBuilder.mTimeLimit);
         if (getMillisToFinish() > 0) {
             IRLog.d("RequestState: Limited by time");
+            IRLog.d("RequestState: Millis to finish: " + getMillisToFinish() + " - Request limit:" +
+                    " " + mBuilder.mTimeLimit);
             return STATE_TIME_LIMITED;
         } else if (getSelectedApps().size() > getRequestsLeft()) {
             if (getMillisToFinish() <= 0) {
