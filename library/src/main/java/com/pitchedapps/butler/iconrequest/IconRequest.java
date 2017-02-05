@@ -679,7 +679,7 @@ public final class IconRequest {
         boolean limited = false;
         for (App app : mApps) {
             if (!mSelectedApps.contains(app)) {
-                if (mBuilder.mHasMaxCount && mSelectedApps.size() >= mBuilder.mMaxCount) {
+                if (mBuilder.mHasMaxCount && mSelectedApps.size() > getRequestsLeft()) {
                     limited = true;
                 } else {
                     changed = true;
