@@ -995,12 +995,12 @@ public final class IconRequest {
                             .putExtra(Intent.EXTRA_STREAM, zipUri)
                             .setType("application/zip");
 
+                    saveRequestsLeft((getRequestsLeft() - getSelectedApps().size()) < 0 ? -1 :
+                            (getRequestsLeft() - getSelectedApps().size()));
+                    saveRequestMoment();
+
                     if (onRequestProgress != null)
                         onRequestProgress.doWhenReady();
-
-                    saveRequestsLeft((getRequestsLeft() - mSelectedApps.size()) < 0 ? -1 :
-                            (getRequestsLeft() - mSelectedApps.size()));
-                    saveRequestMoment();
 
                     if (mBuilder.mContext instanceof Activity) {
                         ((Activity) mBuilder.mContext).startActivityForResult(Intent.createChooser(
