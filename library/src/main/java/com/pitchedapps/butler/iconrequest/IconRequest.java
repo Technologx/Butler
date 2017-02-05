@@ -1004,7 +1004,7 @@ public final class IconRequest {
                             .putExtra(Intent.EXTRA_STREAM, zipUri)
                             .setType("application/zip");
 
-                    saveRequestsLeft((getRequestsLeft() - getSelectedApps().size()) < 0 ? -1 :
+                    saveRequestsLeft((getRequestsLeft() - getSelectedApps().size()) < 0 ? 0 :
                             (getRequestsLeft() - getSelectedApps().size()));
                     saveRequestMoment();
 
@@ -1039,6 +1039,10 @@ public final class IconRequest {
         if (getMillisToFinish() > 0) {
             return STATE_TIME_LIMITED;
         } else if (getSelectedApps().size() > getRequestsLeft()) {
+            if (getMillisToFinish() <= 0) {
+                saveRequestsLeft(-1);
+                return STATE_NORMAL;
+            }
             return STATE_LIMITED;
         }
         return STATE_NORMAL;
