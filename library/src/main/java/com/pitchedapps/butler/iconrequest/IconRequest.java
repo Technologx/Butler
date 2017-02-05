@@ -658,8 +658,9 @@ public final class IconRequest {
         } else {
             if (getSelectedApps().size() >= getRequestsLeft()) {
                 if (mBuilder.mCallback != null) {
-                    mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
-                            getRequestsLeft(), -1);
+                    mBuilder.mCallback.onRequestLimited(mBuilder.mContext, getRequestsLeft() > 0
+                                    ? STATE_LIMITED : STATE_TIME_LIMITED, getRequestsLeft(),
+                            getMillisToFinish());
                 }
                 return false;
             } else {
@@ -691,8 +692,8 @@ public final class IconRequest {
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
                     .mSelectionState);
         if (limited && mBuilder.mCallback != null)
-            mBuilder.mCallback.onRequestLimited(mBuilder.mContext, STATE_LIMITED,
-                    getRequestsLeft(), -1);
+            mBuilder.mCallback.onRequestLimited(mBuilder.mContext, getRequestsLeft() > 0 ?
+                    STATE_LIMITED : STATE_TIME_LIMITED, getRequestsLeft(), getMillisToFinish());
         return changed;
     }
 
@@ -1026,25 +1027,28 @@ public final class IconRequest {
         } else {
             if (mBuilder.mCallback != null)
                 mBuilder.mCallback.onRequestLimited(mBuilder.mContext, currentState,
-                        getRequestsLeft(),
-                        getMillisToFinish());
+                        getRequestsLeft(), getMillisToFinish());
         }
     }
 
     @State
     private int getRequestState() {
         if ((mBuilder.mMaxCount <= 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
-        IRLog.d("Timer: Millis to finish: " + getMillisToFinish() + " - Request limit: " +
+        IRLog.d("RequestState: Millis to finish: " + getMillisToFinish() + " - Request limit: " +
                 mBuilder.mTimeLimit);
         if (getMillisToFinish() > 0) {
+            IRLog.d("RequestState: Limited by time");
             return STATE_TIME_LIMITED;
         } else if (getSelectedApps().size() > getRequestsLeft()) {
             if (getMillisToFinish() <= 0) {
                 saveRequestsLeft(-1);
+                IRLog.d("RequestState: Restarting requests left.");
                 return STATE_NORMAL;
             }
+            IRLog.d("RequestState: Limited by requests - Requests left: " + getRequestsLeft());
             return STATE_LIMITED;
         }
+        IRLog.d("RequestState: Requests allowed");
         return STATE_NORMAL;
     }
 
@@ -1062,7 +1066,7 @@ public final class IconRequest {
         IRLog.d("Timer: [Last request was on: " + sdf.format(savedTime) + "] - [Right" +
                 " now is: " + sdf.format(new Date(IRUtils.getCurrentTimeInMillis())) + "] - " +
                 "[Time Left: ~" + ((mBuilder.mTimeLimit - elapsedTime) / 1000) + " secs.]");
-        return mBuilder.mTimeLimit - elapsedTime;
+        return mBuilder.mTimeLimit - elapsedTime - 500;
     }
 
     private int getRequestsLeft() {
