@@ -733,22 +733,31 @@ public final class IconRequest {
     public void send(final OnRequestProgress onRequestProgress) {
         IRLog.d("Preparing your request to send...");
         EventBusUtils.post(new RequestEvent(true, false, null), mBuilder.mRequestState);
+
+        boolean requestError = false;
+
         if (mApps == null) {
+            requestError = true;
             postError("No apps were loaded from this device.", null);
         } else if (IRUtils.isEmpty(mBuilder.mEmail)) {
+            requestError = true;
             postError("The recipient email for the request cannot be empty.", null);
-        } else if (mSelectedApps == null || mSelectedApps.size() == 0) {
+        } else if (getSelectedApps().size() <= 0) {
             if (mBuilder.mNoneSelectsAll) {
                 mSelectedApps = mApps;
+                requestError = false;
             } else {
+                requestError = true;
                 if (mBuilder.mCallback != null)
                     mBuilder.mCallback.onRequestEmpty(mBuilder.mContext);
                 postError("No apps have been selected for sending in the request.", null);
-                return;
             }
         } else if (IRUtils.isEmpty(mBuilder.mSubject)) {
             mBuilder.mSubject = "Icon Request";
+            requestError = false;
         }
+
+        if (requestError) return;
 
         @State int currentState = getRequestState();
 
@@ -1048,7 +1057,7 @@ public final class IconRequest {
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd,yyyy HH:mm:ss");
         IRLog.d("Timer: [Last request was on: " + sdf.format(savedTime) + "] - [Right" +
                 " now is: " + sdf.format(new Date(IRUtils.getCurrentTimeInMillis())) + "] - " +
-                "[Elapsed Time: " + ((mBuilder.mTimeLimit - elapsedTime) / 1000) + " secs.]");
+                "[Time Left: ~" + ((mBuilder.mTimeLimit - elapsedTime) / 1000) + " secs.]");
         return mBuilder.mTimeLimit - elapsedTime;
     }
 
