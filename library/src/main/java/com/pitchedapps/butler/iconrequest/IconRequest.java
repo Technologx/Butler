@@ -380,27 +380,26 @@ public final class IconRequest {
                 switch (eventType) {
                     case XmlPullParser.START_TAG:
                         final String tagName = parser.getName();
+                        String parsedComponent = null;
                         if (tagName.equals("item")) {
                             try {
                                 // Read package and activity name
-                                mAppCode = parser.getAttributeValue(null, "component");
-                                mAppCode = mAppCode.substring(14, mAppCode.length() - 1);
+                                parsedComponent = parser.getAttributeValue(null, "component");
+                                mAppCode = parsedComponent.substring(14, parsedComponent.length()
+                                        - 1);
                                 //wrapped in ComponentInfo{[Component]} TODO add checker?
                                 //TODO check for valid drawable
                                 // Add new info to our ArrayList and reset the object.
                                 defined.add(mAppCode);
                             } catch (Exception e) {
-                                // TODO Remove this
-                                e.printStackTrace();
-                                IRLog.d("Error adding parsed appfilter item! Due to Exception: "
-                                        + e.getMessage());
+                                IRLog.d("Error adding parsed appfilter item: [" + parsedComponent
+                                        + "]! Due to Exception: " + e.getMessage());
                             }
                         }
                         break;
                 }
                 eventType = parser.next();
             }
-
         } catch (XmlPullParserException | IOException e) {
             e.printStackTrace();
         } finally {
