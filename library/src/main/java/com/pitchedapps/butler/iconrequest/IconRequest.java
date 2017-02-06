@@ -677,11 +677,9 @@ public final class IconRequest {
     public boolean selectAllApps() {
         if (mApps == null) return false;
         boolean changed = false;
-        int state = getRequestState();
         for (App app : mApps) {
             if (!mSelectedApps.contains(app)) {
-                if (mBuilder.mHasMaxCount && (state != STATE_NORMAL)) {
-                } else {
+                if (getRequestState() == STATE_NORMAL) {
                     changed = true;
                     mSelectedApps.add(app);
                 }
@@ -690,7 +688,7 @@ public final class IconRequest {
         if (changed)
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
                     .mSelectionState);
-        if ((state != STATE_NORMAL) && (mBuilder.mCallback != null))
+        if ((getRequestState() != STATE_NORMAL) && (mBuilder.mCallback != null))
             mBuilder.mCallback.onRequestLimited(mBuilder.mContext, state, getRequestsLeft(),
                     getMillisToFinish());
         return changed;
@@ -1035,7 +1033,7 @@ public final class IconRequest {
     @State
     private int getRequestState() {
         if ((mBuilder.mMaxCount <= 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
-        if (getSelectedApps().size() > getRequestsLeft()) {
+        if (getSelectedApps().size() >= getRequestsLeft()) {
             IRLog.d("RequestState: Limited by requests - Requests left: " + getRequestsLeft());
             return STATE_LIMITED;
         } else {
