@@ -1036,24 +1036,23 @@ public final class IconRequest {
     private int getRequestState() {
         if ((mBuilder.mMaxCount <= 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
         if (getSelectedApps().size() > getRequestsLeft()) {
-            if (getMillisToFinish() <= 0) {
-                saveRequestsLeft(-1);
-                IRLog.d("RequestState: Restarting requests left.");
-                return STATE_NORMAL;
-            }
             IRLog.d("RequestState: Limited by requests - Requests left: " + getRequestsLeft());
             return STATE_LIMITED;
-        } else if (getMillisToFinish() > 0) {
-            if (getSelectedApps().size() <= getRequestsLeft()) {
+        } else {
+            if (getMillisToFinish() > 0) {
+                IRLog.d("RequestState: Limited by time");
+                IRLog.d("RequestState: Millis to finish: " + getMillisToFinish() + " - Request " +
+                        "limit: " + mBuilder.mTimeLimit);
+                return STATE_TIME_LIMITED;
+            } else {
+                if (getRequestsLeft() == 0) {
+                    saveRequestsLeft(-1);
+                    IRLog.d("RequestState: Restarting requests left.");
+                }
+                IRLog.d("RequestState: Requests allowed");
                 return STATE_NORMAL;
             }
-            IRLog.d("RequestState: Limited by time");
-            IRLog.d("RequestState: Millis to finish: " + getMillisToFinish() + " - Request limit:" +
-                    " " + mBuilder.mTimeLimit);
-            return STATE_TIME_LIMITED;
         }
-        IRLog.d("RequestState: Requests allowed");
-        return STATE_NORMAL;
     }
 
     private void saveRequestMoment() {
