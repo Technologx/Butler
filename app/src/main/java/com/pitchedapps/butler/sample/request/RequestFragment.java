@@ -105,7 +105,7 @@ public class RequestFragment extends CapsuleFragment {
                                 getActivity().runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        Toast.makeText(getActivity(), "Starting send intent...",
+                                        Toast.makeText(getActivity(), "Preparing request...",
                                                 Toast.LENGTH_SHORT).show();
                                     }
                                 });
@@ -116,8 +116,9 @@ public class RequestFragment extends CapsuleFragment {
                                 getActivity().runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        Toast.makeText(getActivity(), "Starting send intent...",
-                                                Toast.LENGTH_SHORT).show();
+                                        mAdapter.unselectAllApps();
+                                        Toast.makeText(getActivity(), "Request Ready. Starting " +
+                                                "send intent...", Toast.LENGTH_SHORT).show();
                                     }
                                 });
                             }
@@ -148,6 +149,7 @@ public class RequestFragment extends CapsuleFragment {
     private long start;
     private ViewGroup mViewGroup;
     private TextView mText;
+    private RequestsAdapter mAdapter;
 
     private void setupRequest() {
         if (IconRequest.get() == null) {
@@ -159,6 +161,7 @@ public class RequestFragment extends CapsuleFragment {
                     .toEmail("fake-email@fake-website.com")
                     .saveDir(new File(Environment.getExternalStorageDirectory(),
                             "Pitched_Apps/Capsule"))
+                    .maxSelectionCount(5)
                     .withTimeLimit(2, getActivity().getSharedPreferences("ButlerPrefs", Context
                             .MODE_PRIVATE))
                     .includeDeviceInfo(true)
@@ -206,7 +209,7 @@ public class RequestFragment extends CapsuleFragment {
         mViewGroup.removeView(mLoadingView);
         snackbarCustom(String.format(Locale.getDefault(), "Loaded in %d milliseconds", System
                 .currentTimeMillis() - start), Snackbar.LENGTH_LONG).show();
-        RequestsAdapter mAdapter = new RequestsAdapter();
+        mAdapter = new RequestsAdapter();
         mRV.setAdapter(mAdapter);
 //        IconRequest.get().loadHighResIcons();
     }

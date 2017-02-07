@@ -631,7 +631,6 @@ public final class IconRequest {
     }
 
     public boolean selectApp(@NonNull App app) {
-        if (getRequestState() != STATE_NORMAL) return false;
         if (!mSelectedApps.contains(app)) {
             mSelectedApps.add(app);
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
@@ -654,7 +653,7 @@ public final class IconRequest {
         if (isAppSelected(app)) {
             result = unselectApp(app);
         } else {
-            int state = getRequestState();
+            int state = getRequestState(false);
             if (state != STATE_NORMAL) {
                 if (mBuilder.mCallback != null) {
                     mBuilder.mCallback.onRequestLimited(mBuilder.mContext, state, getRequestsLeft
@@ -677,7 +676,7 @@ public final class IconRequest {
         boolean changed = false;
         for (App app : mApps) {
             if (!mSelectedApps.contains(app)) {
-                if (getRequestState() == STATE_NORMAL) {
+                if (getRequestState(false) == STATE_NORMAL) {
                     changed = true;
                     mSelectedApps.add(app);
                 }
@@ -686,7 +685,7 @@ public final class IconRequest {
         if (changed)
             EventBusUtils.post(new AppSelectionEvent(mSelectedApps.size()), mBuilder
                     .mSelectionState);
-        if ((getRequestState() != STATE_NORMAL) && (mBuilder.mCallback != null))
+        if ((getRequestState(false) != STATE_NORMAL) && (mBuilder.mCallback != null))
             mBuilder.mCallback.onRequestLimited(mBuilder.mContext, state, getRequestsLeft(),
                     getMillisToFinish());
         return changed;
@@ -755,7 +754,7 @@ public final class IconRequest {
 
         if (requestError) return;
 
-        @State int currentState = getRequestState();
+        @State int currentState = getRequestState(true);
 
         if (currentState == STATE_NORMAL) {
             new Thread(new Runnable() {
@@ -1000,8 +999,9 @@ public final class IconRequest {
                             .putExtra(Intent.EXTRA_STREAM, zipUri)
                             .setType("application/zip");
 
-                    saveRequestsLeft((getRequestsLeft() - getSelectedApps().size()) < 0 ? 0 :
-                            (getRequestsLeft() - getSelectedApps().size()));
+                    int amount = (getRequestsLeft() - getSelectedApps().size());
+                    IRLog.d("Request: Allowing " + amount + " more requests.");
+                    saveRequestsLeft(amount < 0 ? 0 : amount);
 
                     if (getRequestsLeft() == 0)
                         saveRequestMoment();
@@ -1029,9 +1029,22 @@ public final class IconRequest {
     }
 
     @State
-    private int getRequestState() {
+    private int getRequestState(boolean toSend) {
         if ((mBuilder.mMaxCount <= 0) || (mBuilder.mTimeLimit <= 0)) return STATE_NORMAL;
-        if (getSelectedApps().size() >= getRequestsLeft()) {
+        int sum = toSend ? 0 : 1;
+        IRLog.d("Selected apps: " + getSelectedApps().size() + " - Requests left: " +
+                getRequestsLeft());
+        if ((getSelectedApps().size() + sum) > getRequestsLeft()) {
+            if (getMillisToFinish() > 0) {
+                IRLog.d("RequestState: Limited by time");
+                IRLog.d("RequestState: Millis to finish: " + getMillisToFinish() + " - Request " +
+                        "limit: " + mBuilder.mTimeLimit);
+                return STATE_TIME_LIMITED;
+            } else if (getRequestsLeft() == 0) {
+                saveRequestsLeft(-1);
+                IRLog.d("RequestState: Restarting requests left.");
+                return STATE_NORMAL;
+            }
             IRLog.d("RequestState: Limited by requests - Requests left: " + getRequestsLeft());
             return STATE_LIMITED;
         } else {
@@ -1040,15 +1053,9 @@ public final class IconRequest {
                 IRLog.d("RequestState: Millis to finish: " + getMillisToFinish() + " - Request " +
                         "limit: " + mBuilder.mTimeLimit);
                 return STATE_TIME_LIMITED;
-            } else {
-                if (getRequestsLeft() == 0) {
-                    saveRequestsLeft(-1);
-                    IRLog.d("RequestState: Restarting requests left.");
-                }
-                IRLog.d("RequestState: Requests allowed");
-                return STATE_NORMAL;
             }
         }
+        return STATE_NORMAL;
     }
 
     private void saveRequestMoment() {

@@ -29,7 +29,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.Reques
     public RequestsHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_app_to_request, parent, false);
-        return new RequestsHolder(view, viewType);
+        return new RequestsHolder(view);
     }
 
     @Override
@@ -45,35 +45,44 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.Reques
     @Override
     public void onBindViewHolder(RequestsHolder holder, int position) {
         //noinspection ConstantConditions
-        final App app = getApps().get(position);
+        final App app = getApps().get(holder.getAdapterPosition());
         app.loadIcon(holder.imgIcon, Priority.NORMAL);
-
-        holder.txtName.setText(app.getName());
         final IconRequest ir = IconRequest.get();
-        holder.itemView.setActivated(ir != null && ir.isAppSelected(app));
+        holder.setupItem(ir, app);
+    }
+
+    public void unselectAllApps() {
+        IconRequest r = IconRequest.get();
+        if (r != null) {
+            r.unselectAllApps();
+            notifyDataSetChanged();
+        }
     }
 
     public class RequestsHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
-        final ImageView imgIcon;
-        final TextView txtName;
-        final AppCompatCheckBox checkBox;
-        final int position;
+        private ImageView imgIcon;
+        private TextView txtName;
+        private AppCompatCheckBox checkBox;
 
-        public RequestsHolder(View v, int i) {
+        public RequestsHolder(View v) {
             super(v);
             imgIcon = (ImageView) v.findViewById(R.id.imgIcon);
             txtName = (TextView) v.findViewById(R.id.txtName);
             checkBox = (AppCompatCheckBox) v.findViewById(R.id.chkSelected);
-            position = i;
             v.setOnClickListener(this);
+        }
+
+        public void setupItem(IconRequest ir, App app) {
+            txtName.setText(app.getName());
+            checkBox.setChecked(ir.isAppSelected(app));
         }
 
         @Override
         public void onClick(View view) {
             final IconRequest ir = IconRequest.get();
             if (ir != null && ir.getApps() != null) {
-                final App app = ir.getApps().get(position);
+                final App app = ir.getApps().get(getAdapterPosition());
                 ir.toggleAppSelected(app);
                 checkBox.setChecked(ir.isAppSelected(app));
             }
